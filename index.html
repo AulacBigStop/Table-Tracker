@@ -1339,8 +1339,11 @@ function renderBanner(){
   }
 }
 
-function renderAll(){
+function renderOnly(){
   renderLegend(); renderFloor(); renderStatus(); renderRot(); renderBanner();
+}
+function renderAll(){
+  renderOnly();
   pushToFirebase();
 }
 
@@ -1401,8 +1404,8 @@ function initFirebase(){
     for(const [k,v] of Object.entries(data.links ?? {}))
       st.links[+k] = new Set(v);
     document.getElementById('sct-sel').value = st.servers;
-    renderAll();
     _fbSyncing = false;
+    renderOnly(); // render without pushing back to Firebase
   }
 
   // Wire up real pushToFirebase now that Firebase is ready
