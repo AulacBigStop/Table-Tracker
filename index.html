@@ -12,8 +12,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 <style>
 :root {
   --bg:#0e0e11; --surf:#16161a; --surf2:#1e1e24;
@@ -1349,7 +1347,7 @@ function renderAll(){
 renderAll();
 
 // ── FIREBASE SYNC ──────────────────────────────────────────
-window.addEventListener('load', function initFirebase(){
+function initFirebase(){
   if(typeof firebase === 'undefined'){
     console.warn('Firebase SDK not loaded — running in offline mode');
     return;
@@ -1429,8 +1427,11 @@ window.addEventListener('load', function initFirebase(){
     syncDot.style.background = snap.val() ? '#3FBD5A' : '#E84040';
     syncDot.title = snap.val() ? 'Synced' : 'Offline';
   });
-});
+}
 
 </script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script>initFirebase();</script>
 </body>
 </html>
