@@ -303,6 +303,9 @@ let _fbSyncing = false;
 let _fbPushTimer = null;
 let pushToFirebase = () => {}; // no-op until Firebase is initialized
 
+// ── LOCAL PERSISTENCE KEY
+const LS_KEY = 'tt_shift_v1';
+
 // ── HELPERS
 function secOf(tid){
   for(const [s,arr] of Object.entries(L[st.servers]))
@@ -1350,7 +1353,6 @@ function renderAll(){
 }
 
 // ── LOCAL PERSISTENCE (instant restore on load, Firebase syncs on top)
-const LS_KEY = 'tt_shift_v1';
 
 function saveLocal(){
   try{
@@ -1428,6 +1430,7 @@ function dbToState(data){
       st.links[+k] = new Set(v);
     document.getElementById('sct-sel').value = st.servers;
     _fbSyncing = false;
+    saveLocal();
     renderOnly();
   } catch(e){
     _fbSyncing = false;
@@ -1459,30 +1462,29 @@ function setSyncDot(ok){
   syncDot.title = ok ? 'Synced' : 'Offline';
 }
 
-// Listen for real-time changes using Firebase SSE (EventSource)
-function startSync(){
-  const evtSource = new EventSource(FB_URL + '.json');
-  evtSource.addEventListener('put', e => {
-    try{
-      const msg = JSON.parse(e.data);
-      if(!_fbSyncing) dbToState(msg.data);
+// Listen for changes by polling Firebase every 2 seconds
+let _lastPollData = null;
+async function poll(){
+  try{
+    const res = await fetch(FB_URL + '.json');
+    if(res.ok){
+      const data = await res.json();
       setSyncDot(true);
-    } catch(err){ console.error('[FB] SSE parse error', err); }
-  });
-  evtSource.addEventListener('patch', e => {
-    try{
-      const msg = JSON.parse(e.data);
-      if(!_fbSyncing) dbToState(msg.data);
-    } catch(err){}
-  });
-  evtSource.onerror = () => {
+      // Only apply if data differs from what we last saw (avoid unnecessary re-renders)
+      const asStr = JSON.stringify(data);
+      if(asStr !== _lastPollData){
+        _lastPollData = asStr;
+        if(!_fbSyncing) dbToState(data);
+      }
+    } else {
+      setSyncDot(false);
+    }
+  } catch(e){
     setSyncDot(false);
-    evtSource.close();
-    // Reconnect after 3 seconds
-    setTimeout(startSync, 3000);
-  };
+  }
+  setTimeout(poll, 2000);
 }
-startSync();
+poll();
 </script>
 </body>
 </html>
