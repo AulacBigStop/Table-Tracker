@@ -1262,6 +1262,7 @@ document.getElementById('btn-clr').addEventListener('click',()=>{
     clrArmed = false;
     document.getElementById('btn-clr').textContent = '✕ Clear All';
     st.tables={}; st.events={}; st.movedPos={}; st.links={}; st.guestTotals={}; st.dailyTables=0; st.dailyGuests=0; st.newServers=new Set(); st.selectedSec=null; st.mGroup=null;
+    localStorage.removeItem(LS_KEY);
     closeModal();
     renderAll();
   } else {
@@ -1345,8 +1346,48 @@ function renderOnly(){
 function renderAll(){
   renderOnly();
   pushToFirebase();
+  saveLocal();
 }
 
+// ── LOCAL PERSISTENCE (instant restore on load, Firebase syncs on top)
+const LS_KEY = 'tt_shift_v1';
+
+function saveLocal(){
+  try{
+    const data = {
+      servers: st.servers, names: st.names, tables: st.tables,
+      movedPos: st.movedPos, guestTotals: st.guestTotals,
+      dailyTables: st.dailyTables, dailyGuests: st.dailyGuests,
+      newServers: [...st.newServers], selectedSec: st.selectedSec,
+      links: Object.fromEntries(Object.entries(st.links).map(([k,v])=>[k,[...v]]))
+    };
+    localStorage.setItem(LS_KEY, JSON.stringify(data));
+  } catch(e){}
+}
+
+function loadLocal(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return;
+    const data = JSON.parse(raw);
+    st.servers     = data.servers     ?? st.servers;
+    st.names       = data.names       ?? st.names;
+    st.tables      = data.tables      ?? {};
+    st.movedPos    = data.movedPos    ?? {};
+    st.guestTotals = data.guestTotals ?? {};
+    st.dailyTables = data.dailyTables ?? 0;
+    st.dailyGuests = data.dailyGuests ?? 0;
+    st.newServers  = new Set(data.newServers ?? []);
+    st.selectedSec = data.selectedSec ?? null;
+    st.links = {};
+    for(const [k,v] of Object.entries(data.links ?? {}))
+      st.links[+k] = new Set(v);
+    document.getElementById('sct-sel').value = st.servers;
+  } catch(e){}
+}
+
+// Restore from localStorage instantly, then Firebase will sync on top
+loadLocal();
 renderAll();
 
 // ── FIREBASE SYNC (REST API — no SDK required) ──────────────
