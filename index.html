@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Table Tracker">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0e0e11">
+<title>Table Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<style>
+:root {
+  --bg:#0e0e11; --surf:#16161a; --surf2:#1e1e24;
+  --border:rgba(255,255,255,0.08); --text:#eee; --dim:rgba(255,255,255,0.38);
+  --accent:#FFD700;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;}
+html,body{height:100%;overflow:hidden;font-family:'IBM Plex Mono','Courier New',monospace;background:var(--bg);color:var(--text);}
+body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-select:none;user-select:none;}
+
+/* HEADER */
+#hdr{height:48px;min-height:48px;flex-shrink:0;background:var(--surf);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 12px;gap:10px;}
+#logo{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);letter-spacing:1px;white-space:nowrap;}
+.vdiv{width:1px;height:20px;background:var(--border);}
+.hctl{display:flex;align-items:center;gap:6px;background:var(--surf2);border:1px solid var(--border);border-radius:7px;padding:4px 10px;}
+.hctl label{font-size:10px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.6px;}
+#sct-sel{background:transparent;border:none;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;cursor:pointer;outline:none;-webkit-appearance:none;width:28px;}
+#sct-sel option{background:#1a1a1a;}
+#btn-clr{margin-left:auto;padding:6px 10px;border-radius:7px;border:1px solid rgba(255,80,80,0.3);background:rgba(255,80,80,0.07);color:#ff6060;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'IBM Plex Sans',sans-serif;}
+#btn-clr:active{background:rgba(255,80,80,0.2);}
+
+/* MAIN — side by side */
+#main{flex:1;display:flex;flex-direction:row;overflow:hidden;min-height:0;}
+
+/* LEFT — FLOOR (takes all remaining width) */
+#panel-floor{display:flex;flex-direction:column;flex:1;min-width:0;border-right:2px solid var(--border);}
+#flr-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:6px;overflow:hidden;touch-action:none;}
+#flr-clip{position:relative;overflow:hidden;flex-shrink:0;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,0.7);-webkit-transform:translateZ(0);transform:translateZ(0);}
+#flr{position:relative;background:#191b1f;border-radius:10px;border:1.5px solid rgba(255,255,255,0.1);-webkit-transform:translateZ(0);transform:translateZ(0);}
+.bg-zone{position:absolute;pointer-events:none;border-radius:4px;}
+.zone-lbl{position:absolute;pointer-events:none;font-family:'IBM Plex Mono',monospace;font-weight:700;color:rgba(255,255,255,0.09);letter-spacing:2px;text-align:center;}
+.tbl{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;
+  border:2px solid rgba(0,0,0,0.2);overflow:hidden;-webkit-touch-callout:none;outline:none;}
+.tbl.round{border-radius:50%;}.tbl.special{border-radius:50%;}.tbl.rect{border-radius:5px;}.tbl.booth{border-radius:6px;}
+.tbl.empty{opacity:.36;}.tbl.seated{opacity:1;box-shadow:0 0 0 2.5px rgba(255,255,255,0.3);}
+.tbl.pressing{opacity:.6;}
+.tbl-n{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;line-height:1;opacity:.8;}
+.tbl-p{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:700;line-height:1;}
+.stl{position:absolute;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-family:'IBM Plex Mono',monospace;border:1.5px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.05);
+  color:rgba(255,255,255,0.3);}
+.stl.occ{background:rgba(255,255,255,0.36);color:#fff;border-color:rgba(255,255,255,0.7);}
+.stl.unassigned{opacity:.18;cursor:default;}
+.stl:active{transform:scale(.87);}
+#sbar{height:28px;min-height:28px;flex-shrink:0;background:var(--surf);border-top:1px solid var(--border);
+  display:flex;align-items:center;padding:0 10px;gap:14px;}
+.st{font-size:11px;color:var(--dim);font-family:'IBM Plex Mono',monospace;}
+.st strong{color:var(--text);}
+
+/* NEXT-UP BANNER */
+#next-banner{flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:12px;
+  padding:10px 16px;border-top:2px solid rgba(255,255,255,0.06);
+  background:var(--surf);}
+#next-banner-label{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;
+  color:var(--dim);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;}
+#next-banner-dot{width:18px;height:18px;border-radius:4px;flex-shrink:0;}
+#next-banner-name{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:700;
+  color:#fff;letter-spacing:1px;white-space:nowrap;}
+/* RIGHT — ROTATION (fixed narrow column) */
+#panel-rot{width:190px;min-width:190px;flex-shrink:0;display:flex;flex-direction:column;min-height:0;}
+#rot-header{padding:6px 10px;background:var(--surf);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;}
+#rot-title{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:1px;}
+
+/* server list */
+#rot-scroll{flex:1;overflow-y:hidden;overflow-x:hidden;padding:2px 5px 2px;
+  display:flex;flex-direction:column;gap:2px;}
+#rot-scroll::-webkit-scrollbar{width:3px;}
+#rot-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px;}
+
+.sec-row{border-radius:6px;padding:3px 5px;
+  cursor:pointer;}
+.sec-row:hover{background:rgba(255,255,255,0.04);}
+.sec-row.next-up{background:rgba(255,215,0,0.07);outline:1.5px solid rgba(255,215,0,0.28);}
+.sec-row.selected{outline:2px solid #fff !important;background:rgba(255,255,255,0.08) !important;}
+
+@keyframes rowFlash{0%{background:rgba(255,215,0,0.35);}100%{background:transparent;}}
+.sec-row.flash{animation:rowFlash 0.7s ease-out forwards;}
+
+/* top line: badge + name */
+.sec-row-top{display:flex;align-items:center;gap:4px;margin-bottom:2px;}
+.sec-badge{width:22px;min-width:22px;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;
+  font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;flex-shrink:0;}
+.sec-name-col{flex:1;min-width:0;overflow:hidden;}
+.next-lbl{font-size:7px;color:var(--accent);font-weight:700;letter-spacing:.4px;line-height:1;display:block;}
+.sel-lbl{font-size:7px;color:#fff;font-weight:700;letter-spacing:.4px;line-height:1;display:block;}
+.sec-name-inp{font-size:12px;font-weight:600;color:var(--text);border:none;background:transparent;outline:none;
+  border-bottom:1px dashed rgba(255,255,255,0.12);width:100%;padding:0;font-family:'IBM Plex Sans',sans-serif;cursor:text;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sec-name-inp:focus{border-bottom-color:var(--accent);}
+
+/* bottom line: − score + */
+.sec-row-bot{display:flex;align-items:center;gap:3px;}
+.sec-score{flex:1;font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;text-align:center;}
+.sec-adj-btn{flex:0 0 30px;height:26px;border-radius:5px;border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.06);color:var(--dim);font-size:15px;line-height:1;
+  cursor:pointer;padding:0;font-family:'IBM Plex Mono',monospace;font-weight:700;}
+.sec-adj-btn:active{background:rgba(255,255,255,0.14);}
+
+/* ACTION BAR */
+#rot-actions{flex-shrink:0;background:var(--surf);border-top:1px solid var(--border);padding:7px 8px;display:flex;flex-direction:column;gap:5px;}
+#action-context{font-size:11px;font-weight:600;letter-spacing:.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#action-context.next{color:var(--accent);}
+#action-context.manual{color:#fff;}
+#action-btns{display:flex;gap:7px;}
+.act-btn{flex:1;padding:13px 4px;border-radius:10px;border:none;text-align:center;
+  font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:700;cursor:pointer;transition:opacity .12s;line-height:1.2;}
+.act-btn:active{transform:scale(.93);}
+.act-lbl{font-size:9px;font-weight:400;opacity:.7;display:block;letter-spacing:.3px;margin-top:4px;}
+.act-seat{background:rgba(255,215,0,0.15);color:var(--accent);border:1.5px solid rgba(255,215,0,0.4);}
+.act-d{background:rgba(180,130,255,0.14);color:#b482ff;border:1.5px solid rgba(180,130,255,0.38);}
+
+/* TABLE SEAT MODAL */
+#overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);
+  z-index:500;align-items:center;justify-content:center;-webkit-overflow-scrolling:touch;}
+#overlay.open{display:flex;}
+#modal{background:#17171f;border:1px solid rgba(255,255,255,0.11);border-radius:16px;padding:22px;
+  width:min(330px,92vw);box-shadow:0 28px 70px rgba(0,0,0,0.8);}
+#m-hdr{display:flex;align-items:center;gap:10px;margin-bottom:3px;}
+#m-title{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:700;}
+#m-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;}
+#m-srv{font-size:12px;color:var(--dim);margin-bottom:15px;}
+.m-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);font-weight:600;margin-bottom:7px;}
+.pgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:15px;}
+.pb{padding:11px 0;border-radius:8px;border:1.5px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);
+  color:#bbb;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .1s;}
+.pb.rp{padding:6px 0;font-size:12px;min-width:32px;border-radius:6px;}
+.pb.on{border-color:var(--accent);background:rgba(255,215,0,0.15);color:var(--accent);}
+.pb:active{transform:scale(.9);}
+.mbtns{display:flex;gap:7px;}
+.mbtn-p{flex:1;padding:12px;border-radius:9px;border:none;font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+.mbtn-p:disabled{opacity:.28;cursor:not-allowed;}
+.mbtn-p:not(:disabled):active{opacity:.8;}
+.mbtn-d{padding:12px;border-radius:9px;border:1px solid rgba(255,80,80,0.3);background:rgba(255,80,80,0.09);
+  color:#ff6060;font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;}
+.mbtn-d:active{background:rgba(255,80,80,0.22);}
+.mbtn-g{padding:12px;border-radius:9px;border:1px solid var(--border);background:transparent;
+  color:var(--dim);font-family:'IBM Plex Sans',sans-serif;font-size:14px;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <div id="logo">⬡ TABLE TRACKER</div>
+  <div class="vdiv"></div>
+  <div class="hctl">
+    <label>Servers</label>
+    <select id="sct-sel">
+      <option value="2">2</option><option value="3">3</option><option value="4">4</option>
+      <option value="5">5</option><option value="6">6</option><option value="7" selected>7</option>
+      <option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option>
+    </select>
+  </div>
+  <button id="btn-clr">✕ Clear All</button>
+</div>
+
+<div id="main">
+  <!-- TOP: FLOOR MAP -->
+  <div id="panel-floor">
+    <div id="flr-wrap"><div id="flr-clip"><div id="flr"></div></div></div>
+    <div id="sbar">
+      <div class="st"><strong id="ss">0</strong> seated</div>
+      <div class="st"><strong id="sg">0</strong> guests</div>
+      <div class="st"><strong id="so">0</strong> open</div>
+      <div style="margin-left:auto;display:flex;gap:14px;">
+        <div class="st">🪑 <strong id="total-tables">0</strong></div>
+        <div class="st">👥 <strong id="total-guests">0</strong></div>
+      </div>
+    </div>
+    <div id="next-banner">
+      <div id="next-banner-label">Next Up</div>
+      <div id="next-banner-dot"></div>
+      <div id="next-banner-name">—</div>
+      <div id="next-banner-upcoming" style="margin-left:auto;display:flex;align-items:center;gap:6px;"></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM: ROTATION -->
+  <div id="panel-rot">
+    <div id="rot-header">
+      <div id="rot-title">⚖ ROTATION</div>
+    </div>
+    <div id="rot-scroll"></div>
+    <div id="rot-actions">
+      <div id="action-context" class="next"></div>
+      <div id="action-btns">
+        <button class="act-btn act-seat" id="act-seat">＋ Seat<span class="act-lbl">Choose party size</span></button>
+        <button class="act-btn act-d"   id="act-d"   >−<span class="act-lbl">Skip</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TABLE SEAT MODAL -->
+<div id="overlay">
+  <div id="modal">
+    <div id="m-hdr">
+      <div id="m-title">Table 00</div>
+      <div id="m-badge">§1</div>
+    </div>
+    <div id="m-srv"></div>
+    <div id="m-timer" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;
+      text-align:center;margin-bottom:14px;letter-spacing:2px;"></div>
+    <div class="m-lbl">Party Size</div>
+    <div class="pgrid">
+      <button class="pb" data-n="0" style="font-size:10px;letter-spacing:-.5px;">In Use</button>
+      <button class="pb" data-n="1">1</button><button class="pb" data-n="2">2</button>
+      <button class="pb" data-n="3">3</button><button class="pb" data-n="4">4</button>
+      <button class="pb" data-n="5">5</button><button class="pb" data-n="6">6</button>
+      <button class="pb" data-n="7">7</button><button class="pb" data-n="8">8</button>
+      <button class="pb" data-n="9">9</button>
+    </div>
+    <div class="mbtns" id="mbtns"></div>
+  </div>
+</div>
+
+<script>
+// ── COLORS
+const FLOOR_C = {
+  1:{bg:'#FFD700',tx:'#000'}, 2:{bg:'#FFFFFF',tx:'#000'}, 3:{bg:'#FF85B3',tx:'#000'},
+  4:{bg:'#FF8C00',tx:'#000'}, 5:{bg:'#9B6333',tx:'#fff'}, 6:{bg:'#00C2E8',tx:'#000'},
+  7:{bg:'#3FBD5A',tx:'#000'}, 8:{bg:'#909090',tx:'#fff'}, 9:{bg:'#AA44DD',tx:'#fff'},
+  10:{bg:'#E82222',tx:'#fff'},11:{bg:'#8B0000',tx:'#fff'}
+};
+
+// ── FLOOR SECTION LAYOUTS
+const L = {
+  2:{1:[900,11,12,13,14,15,21,22,23,24,25,31,32,33,34,35,41,42,43,44,45,51,52,53,54,55,63,64,65],2:[61,62,701,702,703,704]},
+  3:{1:[900,11,12,21,31,41,42,43,44,51,52,53,54,63],2:[61,62,701,702,703,704],3:[13,14,15,22,23,24,25,32,33,34,35,45,55,64,65]},
+  4:{1:[900,11,12,21,31,41,42,43,44,51],2:[61,62,701,702,703,704],3:[13,14,15,22,23,24,25,32,33,34,35,45],4:[52,53,54,55,63,64,65]},
+  5:{1:[900,11,12,21,31,41,42,43,44,51],2:[61,62,704],3:[13,14,15,22,23,24,25,32,33,34,35,45],4:[52,53,54,55,63,64,65],5:[701,702,703]},
+  6:{1:[900,11,31,41,42,43,44,51],2:[61,62,704],3:[13,14,15,32,33,34,35,45],4:[52,53,54,55,63,64,65],5:[701,702,703],6:[12,21,22,23,24,25]},
+  7:{1:[900,11,31,41,51],2:[61,62,704],3:[13,14,15,32,33,34,35,45],4:[52,53,54,55,65],5:[701,702,703],6:[12,21,22,23,24,25],7:[42,43,44,63,64]},
+  8:{1:[900,11,31,41,51],2:[61,62],3:[35,45,13,14,15,32,33,34],4:[52,53,54,55,65],5:[701,702],6:[12,21,22,23,24,25],7:[42,43,44,63,64],8:[703,704]},
+  9:{1:[900,11,31,41,51],2:[61,62],3:[35,45,32,33,34],4:[52,53,54,55,65],5:[701,702],6:[12,21,22,23],7:[42,43,44,63,64],8:[703,704],9:[13,14,15,24,25]},
+  10:{1:[900,11,31,41,51],2:[61,62],3:[35,32,33,34],4:[52,53,54,65],5:[701,702],6:[12,21,22,23],7:[42,43,44,63],8:[703,704],9:[13,14,15,24,25],10:[45,55,64]},
+  11:{1:[31,41,51],2:[61,62],3:[35,32,33,34],4:[52,53,54,65],5:[701,702],6:[12,21,22,23],7:[42,43,44,63],8:[703,704],9:[13,14,24,25],10:[45,55,64],11:[11,15,900]}
+};
+
+// ── TABLE POSITIONS
+const T = {
+  61:{l:18,t:1.5,w:8,h:7,s:'booth-h'}, 62:{l:29,t:1.5,w:8,h:7,s:'booth-h'},
+  63:{l:40,t:1.5,w:8,h:7,s:'booth-h'}, 64:{l:51,t:1.5,w:8,h:7,s:'booth-h'}, 65:{l:62,t:1.5,w:8,h:7,s:'booth-h'},
+  704:{l:23,t:11,w:8,h:9.5,s:'booth'}, 51:{l:34,t:11,w:8,h:9.5,s:'booth'},
+  52:{l:46.5,t:11,w:5,h:9.5,s:'rect-v'}, 53:{l:55,t:11,w:8,h:9.5,s:'rect-v4'},
+  54:{l:66.5,t:11,w:5,h:9.5,s:'rect-v'}, 55:{l:75,t:11,w:8,h:9.5,s:'booth'},
+  703:{l:23,t:23,w:8,h:9.5,s:'booth'}, 41:{l:34,t:23,w:8,h:9.5,s:'booth'},
+  42:{l:46.5,t:23,w:5,h:9.5,s:'rect-v'}, 43:{l:55,t:23,w:8,h:9.5,s:'rect-v4'},
+  44:{l:66.5,t:23,w:5,h:9.5,s:'rect-v'}, 45:{l:75,t:23,w:8,h:9.5,s:'booth'},
+  702:{l:23,t:35,w:8,h:9.5,s:'booth-bot2'}, 31:{l:34,t:35,w:8,h:9.5,s:'booth-bot2'},
+  32:{l:46.5,t:35,w:5,h:9.5,s:'rect-v'}, 33:{l:55,t:35,w:8,h:9.5,s:'rect-v4'},
+  34:{l:66.5,t:35,w:5,h:9.5,s:'rect-v'}, 35:{l:75,t:35,w:8,h:9.5,s:'booth'},
+  701:{l:23,t:47,w:8,h:9.5,s:'booth-top2'}, 21:{l:34,t:47,w:8,h:9.5,s:'booth-top2'},
+  22:{l:46.5,t:47,w:5,h:9.5,s:'rect-v'}, 23:{l:55,t:47,w:8,h:9.5,s:'rect-v4'},
+  24:{l:66.5,t:47,w:5,h:9.5,s:'rect-v'}, 25:{l:75,t:47,w:8,h:9.5,s:'booth'},
+  11:{l:34,t:62,w:8,h:9.5,s:'booth-top2'}, 12:{l:45,t:62,w:8,h:9.5,s:'booth-top2'},
+  13:{l:55,t:62,w:8,h:9.5,s:'booth-top2'}, 14:{l:66.5,t:62,w:5,h:9.5,s:'booth-top1'},
+  15:{l:75,t:62,w:8,h:9.5,s:'booth-top2'},
+  900:{l:2,t:61,w:13,h:13,s:'corner-booth-ccw'}
+};
+
+const STOOL_POS = {
+  808:{l:13.5,t:14},807:{l:13.5,t:19},806:{l:13.5,t:24},805:{l:13.5,t:29},
+  804:{l:13.5,t:34},803:{l:13.5,t:39},802:{l:13.5,t:44},801:{l:13.5,t:49}
+};
+
+// Skip counts as 1.0 — advances rotation same as a table
+// Party of 5+ logs as two separate X entries (no XL type)
+// ── STATE
+const st = {
+  servers:7,
+  names:{1:'Server 1',2:'Server 2',3:'Server 3',4:'Server 4',5:'Server 5',
+    6:'Server 6',7:'Server 7',8:'Server 8',9:'Server 9',10:'Server 10',11:'Server 11'},
+  tables:{}, events:{},
+  movedPos:{},          // {id: {l,t}} — position overrides from dragging
+  links:{},             // {id: Set(linkedIds)} — bidirectional link map
+  guestTotals:{},      // cumulative guest count per server
+  dailyTables:0,       // total tables seated today
+  dailyGuests:0,       // total guests seated today
+  newServers: new Set(),
+  selectedSec: null,
+  rotMode: false,
+  mTable:null, mParty:null, mGroup:null, mMultiSec:null, mMultiStep:0,
+  _timerInterval:null, _modalCooldown:false
+};
+
+// ── FIREBASE STUBS (real init happens at bottom after DOM ready)
+let _fbSyncing = false;
+let _fbPushTimer = null;
+let pushToFirebase = () => {}; // no-op until Firebase is initialized
+
+// ── HELPERS
+function secOf(tid){
+  for(const [s,arr] of Object.entries(L[st.servers]))
+    if(arr.includes(+tid)) return +s;
+  return null;
+}
+function rotSections(){ return Array.from({length:st.servers},(_,i)=>i+1); }
+function secGuestScore(s){ return Math.round(st.guestTotals[s]||0); }
+function stoolSecOf(sid){
+  const n = st.servers;
+  // layouts 2-4: all stools → section 2
+  if(n <= 4) return 2;
+  // layouts 5-7: 801-804 → section 5, 805-808 → section 2
+  if(n <= 7) return (sid >= 801 && sid <= 804) ? 5 : 2;
+  // layouts 8-11: 804-805 → section 8, 801-803 → section 5, 806-808 → section 2
+  if(sid >= 806) return 2;
+  if(sid >= 804) return 8;
+  return 5;
+}
+function clearUnassignedStools(){
+  for(const id of Object.keys(STOOL_POS)){
+    const sid = +id;
+    if(st.tables[sid] !== undefined && stoolSecOf(sid) === null){
+      delete st.tables[sid];
+    }
+  }
+}
+// Display score — what the score column shows based on toggle
+function secGuestScore(s){ return Math.round(st.guestTotals[s]||0); }
+function nextUp(){
+  // Newly added servers jump to the front (priority overrides guest count)
+  if(st.newServers.size > 0){
+    let min=Infinity, best=null;
+    for(const s of st.newServers){
+      if(s > st.servers) continue;
+      const sc=secGuestScore(s); if(sc<min){min=sc;best=s;}
+    }
+    if(best !== null) return best;
+  }
+  // Lowest guest total is next up
+  let min=Infinity, best=null;
+  for(let s=1;s<=st.servers;s++){const sc=secGuestScore(s);if(sc<min){min=sc;best=s;}}
+  return best;
+}
+// The section that will receive the next button press
+function activeTarget(){ return st.selectedSec !== null ? st.selectedSec : nextUp(); }
+
+// ── SELECTION
+function selectSec(s){
+  // Clicking the already-selected row deselects (back to auto)
+  st.selectedSec = (st.selectedSec === s) ? null : s;
+  updateActionContext();
+  renderRot();
+}
+function clearSelection(){
+  st.selectedSec = null;
+  updateActionContext();
+  renderRot();
+}
+
+function updateActionContext(){
+  const ctx = document.getElementById('action-context');
+  if(st.selectedSec !== null){
+    const c = FLOOR_C[st.selectedSec];
+    const name = st.names[st.selectedSec]||`Server ${st.selectedSec}`;
+    ctx.className = 'manual';
+    ctx.innerHTML = `<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${c.bg};margin-right:5px;vertical-align:middle;"></span>Logging to: <strong>${name}</strong> <span style="opacity:.45;font-weight:400;font-size:9px;">(tap row again to deselect)</span>`;
+  } else {
+    const n = nextUp();
+    const c = n ? FLOOR_C[n] : null;
+    const name = n ? (st.names[n]||`Server ${n}`) : '—';
+    ctx.className = 'next';
+    ctx.innerHTML = c
+      ? `<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${c.bg};margin-right:5px;vertical-align:middle;"></span>Next up: <strong>${name}</strong>`
+      : 'Next up: —';
+  }
+}
+
+// ── ROTATION RENDER
+let rowEls = {};
+function renderRot(){
+  const wrap = document.getElementById('rot-scroll');
+  wrap.innerHTML = '';
+  rowEls = {};
+  const secs = rotSections();
+  const next = nextUp();
+
+  for(const s of secs){
+    const isNext = s === next && st.selectedSec === null;
+    const isSel  = s === st.selectedSec;
+    const col    = FLOOR_C[s];
+    const name   = st.names[s]||`Server ${s}`;
+
+    const row = document.createElement('div');
+    row.className = 'sec-row' + (isNext?' next-up':'') + (isSel?' selected':'');
+    rowEls[s] = row;
+    row.addEventListener('click', e => { if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON') return; selectSec(s); });
+
+    // Top line: badge + name
+    const rowTop = document.createElement('div');
+    rowTop.className = 'sec-row-top';
+
+    const badge = document.createElement('div');
+    badge.className = 'sec-badge';
+    badge.style.cssText = `background:${col.bg};color:${col.tx}`;
+    badge.textContent = s;
+
+    const nameCol = document.createElement('div');
+    nameCol.className = 'sec-name-col';
+    if(isSel){ const sl=document.createElement('div');sl.className='sel-lbl';sl.textContent='● SELECTED';nameCol.appendChild(sl); }
+    else if(st.newServers.has(s)){ const nl=document.createElement('div');nl.className='next-lbl';nl.textContent='★ NEW · NEXT UP';nameCol.appendChild(nl); }
+    else if(isNext){ const nl=document.createElement('div');nl.className='next-lbl';nl.textContent='NEXT UP';nameCol.appendChild(nl); }
+    const ni = document.createElement('input');
+    ni.type='text'; ni.className='sec-name-inp'; ni.value=name; ni.maxLength=16; ni.dataset.s=s;
+    ni.addEventListener('change', e => { st.names[+e.target.dataset.s]=e.target.value.trim()||name; renderLegend(); updateActionContext(); renderBanner(); });
+    ni.addEventListener('keydown', e => { if(e.key==='Enter') e.target.blur(); });
+    nameCol.appendChild(ni);
+    rowTop.appendChild(badge);
+    rowTop.appendChild(nameCol);
+
+    // Bottom line: − score +
+    const rowBot = document.createElement('div');
+    rowBot.className = 'sec-row-bot';
+
+    const score = secGuestScore(s);
+    const btnMinus = document.createElement('button');
+    btnMinus.textContent = '−';
+    btnMinus.className = 'sec-adj-btn';
+    btnMinus.addEventListener('click', ev => { ev.stopPropagation(); st.guestTotals[s]=Math.max(0,(st.guestTotals[s]||0)-1); renderRot(); });
+
+    const scoreEl = document.createElement('div');
+    scoreEl.className = 'sec-score';
+    scoreEl.style.color = isSel?'#fff':isNext?'var(--accent)':score>0?'var(--text)':'var(--dim)';
+    scoreEl.textContent = Math.round(score);
+
+    const btnPlus = document.createElement('button');
+    btnPlus.textContent = '+';
+    btnPlus.className = 'sec-adj-btn';
+    btnPlus.addEventListener('click', ev => { ev.stopPropagation(); st.guestTotals[s]=(st.guestTotals[s]||0)+1; renderRot(); });
+
+    rowBot.appendChild(btnMinus);
+    rowBot.appendChild(scoreEl);
+    rowBot.appendChild(btnPlus);
+
+    row.appendChild(rowTop);
+    row.appendChild(rowBot);
+    wrap.appendChild(row);
+  }
+
+  updateActionContext();
+  renderBanner();
+}
+
+// Log an event to the active target (selected or next-up)
+function addEvent(type, guests){
+  const s = activeTarget();
+  if(!s) return;
+  if(!st.guestTotals[s]) st.guestTotals[s] = 0;
+  const g = guests || (type==='S' ? 1 : type==='D' ? 1 : 3);
+  st.guestTotals[s] += g;
+  // Daily totals: count skips as a table but no guests; singles/tables add guests
+  if(type !== 'D'){ st.dailyGuests += g; }
+  st.dailyTables++;
+  st.newServers.delete(s);
+  st.selectedSec = null;
+  renderRot();
+}
+
+// Auto-log from floor seating to a specific section
+function addEventToSec(sec, type, guests){
+  if(!st.guestTotals[sec]) st.guestTotals[sec] = 0;
+  const g = guests || (type==='S' ? 1 : type==='D' ? 1 : 3);
+  st.guestTotals[sec] += g;
+  // Daily totals
+  if(type !== 'D'){ st.dailyGuests += g; }
+  st.dailyTables++;
+  st.newServers.delete(sec);
+  renderRot();
+  const row = rowEls[sec];
+  if(row){
+    row.classList.remove('flash');
+    void row.offsetWidth;
+    row.classList.add('flash');
+    setTimeout(() => row.classList.remove('flash'), 800);
+  }
+}
+
+// Legend removed — server names editable in rotation panel only
+function renderLegend(){}
+
+function renderFloor(){
+  const wrap=document.getElementById('flr-wrap');
+  const clip=document.getElementById('flr-clip');
+  const flr=document.getElementById('flr');
+  const cw=wrap.clientWidth-12, ch=wrap.clientHeight-12;
+
+  // We show 0→86% of width and 0→75.5% of height (equal top/bottom margin of ~1.5%)
+  const SHOW_W=0.86, SHOW_H=0.755;
+  const BASE_RATIO=1.10; // correct table proportions
+  const VIS_AR=BASE_RATIO*SHOW_W/SHOW_H; // visible aspect ratio ≈ 1.252
+
+  let fw_v,fh_v;
+  if(cw/ch>VIS_AR){fh_v=ch;fw_v=ch*VIS_AR;}else{fw_v=cw;fh_v=cw/VIS_AR;}
+
+  const fw=Math.round(fw_v/SHOW_W);
+  const fh=Math.round(fh_v/SHOW_H);
+  const fw_v_r=Math.round(fw_v);
+  const fh_v_r=Math.round(fh_v);
+
+  clip.style.width=fw_v_r+'px';
+  clip.style.height=fh_v_r+'px';
+  flr.style.width=fw+'px';
+  flr.style.height=fh+'px';
+  flr.style.borderRadius='0';
+  flr.style.boxShadow='none';
+  flr.innerHTML='';
+
+  const ssz=Math.max(14,fw*0.03);
+  for(const [id,pos] of Object.entries(STOOL_POS)){
+    const sid = +id;
+    const sec = stoolSecOf(sid);
+    const d = st.tables[sid];
+    const seated = d !== undefined;
+    const c = sec ? FLOOR_C[sec] : null;
+    const el=document.createElement('div');
+    el.className='stl'+(seated?' occ':'')+(sec?'':' unassigned');
+    el.style.cssText=`left:${pos.l}%;top:${pos.t}%;width:${ssz}px;height:${ssz}px;margin-left:-${ssz/2}px;margin-top:-${ssz/2}px;font-size:${Math.max(5,ssz*0.4)}px;`;
+    el.textContent = sid;
+    if(c){
+      el.style.background = c.bg;
+      el.style.color = c.tx;
+      el.style.borderColor = seated ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.2)';
+      el.style.opacity = seated ? '1' : '0.38';
+    }
+    if(sec){
+      addLongPress(el, sid, ()=>{
+        if(st.tables[sid]){
+          openStoolModal(sid, sec);
+        } else {
+          doSeatTable(sid, 1, sec);
+          renderFloor(); renderStatus();
+        }
+      });
+    }
+    flr.appendChild(el);
+  }
+
+  // Draw link overlays before tables (so tables render on top)
+  const drawnGroups = new Set();
+  for(const [idStr] of Object.entries(st.links)){
+    const id=+idStr;
+    if(drawnGroups.has(id)||!st.links[id]||st.links[id].size===0) continue;
+    const group=getLinkedGroup(id);
+    group.forEach(gid=>drawnGroups.add(gid));
+    // Find bounding box of the group
+    let minL=100,minT=100,maxR=0,maxB=0;
+    for(const gid of group){
+      const pos=T[gid]; if(!pos) continue;
+      const l=st.movedPos[gid]?.l??pos.l, t=st.movedPos[gid]?.t??pos.t;
+      minL=Math.min(minL,l); minT=Math.min(minT,t);
+      maxR=Math.max(maxR,l+pos.w); maxB=Math.max(maxB,t+pos.h);
+    }
+    const ov=document.createElement('div');
+    ov.style.cssText=`position:absolute;left:${minL-1}%;top:${minT-1}%;width:${maxR-minL+2}%;height:${maxB-minT+2}%;
+      background:rgba(255,255,255,0.06);border:2px dashed rgba(255,255,255,0.25);border-radius:8px;pointer-events:none;z-index:0;`;
+    flr.appendChild(ov);
+  }
+
+  for(const [idStr,pos] of Object.entries(T)){
+    const id=+idStr, s=secOf(id); if(!s) continue;
+    const c=FLOOR_C[s], d=st.tables[id], seated=d !== undefined;
+    // Use moved position if set, otherwise original
+    const rpos = st.movedPos[id] ? {...pos, l:st.movedPos[id].l, t:st.movedPos[id].t} : pos;
+
+    if(pos.s === 'booth' || pos.s === 'booth-bot2' || pos.s === 'booth-top2' || pos.s === 'booth-top1' || pos.s === 'booth-h'){
+      const tableColor = darkenHex(c.bg);
+
+      function mkBench(radiusTop, radiusBot){
+        const b = document.createElement('div');
+        b.style.cssText = `flex:0 0 22%;background:${c.bg};border-radius:${radiusTop}px ${radiusTop}px ${radiusBot}px ${radiusBot}px;border:1.5px solid rgba(0,0,0,0.25);`;
+        return b;
+      }
+      function mk2Chairs(){
+        const row = document.createElement('div');
+        row.style.cssText = `flex:0 0 22%;display:flex;gap:6%;justify-content:center;`;
+        for(let i=0;i<2;i++){
+          const ch = document.createElement('div');
+          ch.style.cssText = `flex:0 0 38%;background:${c.bg};border-radius:3px;border:1.5px solid rgba(0,0,0,0.25);`;
+          row.appendChild(ch);
+        }
+        return row;
+      }
+      function mk1Chair(){
+        const row = document.createElement('div');
+        row.style.cssText = `flex:0 0 22%;display:flex;justify-content:center;`;
+        const ch = document.createElement('div');
+        ch.style.cssText = `flex:0 0 55%;background:${c.bg};border-radius:3px;border:1.5px solid rgba(0,0,0,0.25);`;
+        row.appendChild(ch);
+        return row;
+      }
+      function mkBenchH(radiusL, radiusR){
+        const b = document.createElement('div');
+        b.style.cssText = `flex:0 0 22%;background:${c.bg};border-radius:${radiusL}px ${radiusR}px ${radiusR}px ${radiusL}px;border:1.5px solid rgba(0,0,0,0.25);`;
+        return b;
+      }
+
+      const isH = pos.s === 'booth-h';
+      const wrap = document.createElement('div');
+      wrap.style.cssText = `position:absolute;left:${rpos.l}%;top:${rpos.t}%;width:${rpos.w}%;height:${rpos.h}%;
+        display:flex;flex-direction:${isH?'row':'column'};align-items:stretch;gap:4%;cursor:pointer;
+        opacity:${seated?'1':'0.36'};transition:transform .12s,opacity .15s;`;
+      if(seated) wrap.style.filter='drop-shadow(0 0 3px rgba(255,255,255,0.25))';
+
+      const tbl = document.createElement('div');
+      tbl.style.cssText = `flex:1;background:${tableColor};border-radius:3px;border:1.5px solid rgba(0,0,0,0.3);
+        display:flex;flex-direction:column;align-items:center;justify-content:center;`;
+      const partySpan = document.createElement('span');
+      partySpan.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:${c.tx};line-height:1;`;
+      partySpan.textContent = seated && d.party ? d.party : '';
+      const numSpan = document.createElement('span');
+      numSpan.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;color:${c.tx};opacity:.8;line-height:1;`;
+      numSpan.textContent = id;
+      tbl.appendChild(partySpan);
+      tbl.appendChild(numSpan);
+
+      if(pos.s === 'booth')      { wrap.appendChild(mkBench(4,2));    wrap.appendChild(tbl); wrap.appendChild(mkBench(2,4)); }
+      if(pos.s === 'booth-bot2') { wrap.appendChild(mkBench(4,2));    wrap.appendChild(tbl); wrap.appendChild(mk2Chairs()); }
+      if(pos.s === 'booth-top2') { wrap.appendChild(mk2Chairs());     wrap.appendChild(tbl); wrap.appendChild(mkBench(2,4)); }
+      if(pos.s === 'booth-top1') { wrap.appendChild(mk1Chair());      wrap.appendChild(tbl); wrap.appendChild(mkBench(2,4)); }
+      if(pos.s === 'booth-h')    { wrap.appendChild(mkBenchH(4,2));   wrap.appendChild(tbl); wrap.appendChild(mkBenchH(2,4)); }
+
+      addTableEvents(wrap, id, ()=>openModal(id));
+      flr.appendChild(wrap);
+
+    } else if(pos.s === 'corner-booth' || pos.s === 'corner-booth-ccw'){
+      const tableColor = darkenHex(c.bg);
+
+      const wrap = document.createElement('div');
+      wrap.style.cssText = `position:absolute;left:${rpos.l}%;top:${rpos.t}%;width:${rpos.w}%;height:${rpos.h}%;
+        cursor:pointer;opacity:${seated?'1':'0.36'};transition:opacity .15s;`;
+      if(seated) wrap.style.filter='drop-shadow(0 0 3px rgba(255,255,255,0.25))';
+
+      if(pos.s === 'corner-booth'){
+        // bench top + bench left, table bottom-right
+        const benchTop  = document.createElement('div');
+        benchTop.style.cssText  = `position:absolute;top:0;left:0;right:0;height:22%;background:${c.bg};border-radius:4px 4px 2px 2px;border:1.5px solid rgba(0,0,0,0.25);`;
+        const benchLeft = document.createElement('div');
+        benchLeft.style.cssText = `position:absolute;top:26%;left:0;width:22%;bottom:0;background:${c.bg};border-radius:2px 2px 4px 4px;border:1.5px solid rgba(0,0,0,0.25);`;
+        const tblSurf   = document.createElement('div');
+        tblSurf.style.cssText   = `position:absolute;top:26%;left:26%;right:0;bottom:0;background:${tableColor};border-radius:3px;border:1.5px solid rgba(0,0,0,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;`;
+        wrap.appendChild(benchTop); wrap.appendChild(benchLeft); wrap.appendChild(tblSurf);
+        const p=document.createElement('span'); p.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;color:${c.tx};line-height:1;`; p.textContent=seated&&d.party?d.party:''; tblSurf.appendChild(p);
+        const n=document.createElement('span'); n.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:${c.tx};opacity:.8;line-height:1;`; n.textContent=id; tblSurf.appendChild(n);
+      } else {
+        // corner-booth-ccw: bench bottom + bench left, table top-right
+        const benchBot  = document.createElement('div');
+        benchBot.style.cssText  = `position:absolute;bottom:0;left:0;right:0;height:22%;background:${c.bg};border-radius:2px 2px 4px 4px;border:1.5px solid rgba(0,0,0,0.25);`;
+        const benchLeft = document.createElement('div');
+        benchLeft.style.cssText = `position:absolute;top:0;left:0;width:22%;bottom:26%;background:${c.bg};border-radius:4px 4px 2px 2px;border:1.5px solid rgba(0,0,0,0.25);`;
+        const tblSurf   = document.createElement('div');
+        tblSurf.style.cssText   = `position:absolute;top:0;left:26%;right:0;bottom:26%;background:${tableColor};border-radius:3px;border:1.5px solid rgba(0,0,0,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;`;
+        wrap.appendChild(benchBot); wrap.appendChild(benchLeft); wrap.appendChild(tblSurf);
+        const p=document.createElement('span'); p.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;color:${c.tx};line-height:1;`; p.textContent=seated&&d.party?d.party:''; tblSurf.appendChild(p);
+        const n=document.createElement('span'); n.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:${c.tx};opacity:.8;line-height:1;`; n.textContent=id; tblSurf.appendChild(n);
+      }
+
+      addTableEvents(wrap, id, ()=>openModal(id));
+      flr.appendChild(wrap);
+
+    } else if(pos.s === 'rect-v' || pos.s === 'rect-v4'){
+      const chairs = pos.s === 'rect-v4' ? 2 : 1;
+      const wrap = document.createElement('div');
+      wrap.style.cssText = `position:absolute;left:${rpos.l}%;top:${rpos.t}%;width:${rpos.w}%;height:${rpos.h}%;
+        display:flex;flex-direction:column;align-items:center;justify-content:space-between;cursor:pointer;
+        opacity:${seated?'1':'0.36'};transition:transform .12s,opacity .15s;`;
+      if(seated) wrap.style.filter='drop-shadow(0 0 3px rgba(255,255,255,0.25))';
+
+      function chairRow(){
+        const row = document.createElement('div');
+        row.style.cssText = `width:100%;height:14%;display:flex;gap:6%;justify-content:center;flex-shrink:0;`;
+        for(let i=0;i<chairs;i++){
+          const ch = document.createElement('div');
+          ch.style.cssText = `flex:0 0 ${chairs===2?'38%':'55%'};background:${c.bg};border-radius:3px;border:1.5px solid rgba(0,0,0,0.25);`;
+          row.appendChild(ch);
+        }
+        return row;
+      }
+
+      const tableEl = document.createElement('div');
+      tableEl.style.cssText = `width:${chairs===2?'95%':'80%'};flex:1;margin:4% 0;background:${c.bg};border-radius:4px;
+        border:2px solid rgba(0,0,0,0.25);
+        display:flex;flex-direction:column;align-items:center;justify-content:center;`;
+      const partySpan = document.createElement('span');
+      partySpan.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:${c.tx};line-height:1;`;
+      partySpan.textContent = seated && d.party ? d.party : '';
+      const numSpan = document.createElement('span');
+      numSpan.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;color:${c.tx};opacity:.8;line-height:1;`;
+      numSpan.textContent = id;
+      tableEl.appendChild(partySpan);
+      tableEl.appendChild(numSpan);
+
+      wrap.appendChild(chairRow());
+      wrap.appendChild(tableEl);
+      wrap.appendChild(chairRow());
+      addTableEvents(wrap, id, ()=>openModal(id));
+      flr.appendChild(wrap);
+
+    } else {
+      const el=document.createElement('div');
+      el.className=`tbl ${pos.s} ${seated?'seated':'empty'}`;
+      el.style.cssText=`left:${rpos.l}%;top:${rpos.t}%;width:${rpos.w}%;height:${rpos.h}%;background:${c.bg};color:${c.tx};`;
+      if(seated){
+        const label = d.party === 0 ? '' : `<span class="tbl-p">${d.party}</span>`;
+        el.innerHTML=`${label}<span class="tbl-n">${id}</span>`;
+      } else {
+        el.innerHTML=`<span class="tbl-n">${id}</span>`;
+      }
+      addTableEvents(el, id, ()=>openModal(id));
+      flr.appendChild(el);
+    }
+  }
+}
+
+function mkZone(f,l,t,w,h,bg){const e=document.createElement('div');e.className='bg-zone';e.style.cssText=`left:${l}%;top:${t}%;width:${w}%;height:${h}%;background:${bg};`;f.appendChild(e);}
+function mkLbl(f,l,t,w,txt,fs,vert){const e=document.createElement('div');e.className='zone-lbl';e.style.cssText=`left:${l}%;top:${t}%;width:${w}%;font-size:${fs}px;`+(vert?'writing-mode:vertical-rl;letter-spacing:2px;':'letter-spacing:2px;');e.textContent=txt;f.appendChild(e);}
+
+let _capturedEl = null, _capturedPid = null;
+
+function releaseAnyCapture(){
+  if(_capturedEl && _capturedPid !== null){
+    try{ _capturedEl.releasePointerCapture(_capturedPid); }catch(_){}
+    _capturedEl = null; _capturedPid = null;
+  }
+}
+// iOS-compatible color helpers (replaces color-mix which needs Safari 16.2+)
+function darkenHex(hex, amt=0.7){
+  const h=hex.replace('#',''), r=parseInt(h.slice(0,2),16), g=parseInt(h.slice(2,4),16), b=parseInt(h.slice(4,6),16);
+  return `rgb(${Math.round(r*amt)},${Math.round(g*amt)},${Math.round(b*amt)})`;
+}
+function tintSurf(hex, amt=0.1){
+  const h=hex.replace('#',''), r=parseInt(h.slice(0,2),16), g=parseInt(h.slice(2,4),16), b=parseInt(h.slice(4,6),16);
+  return `rgb(${Math.round(r*amt+22*(1-amt))},${Math.round(g*amt+22*(1-amt))},${Math.round(b*amt+26*(1-amt))})`;
+}
+
+function unlinkTable(id){
+  const linked = st.links[id];
+  if(linked){ for(const lid of linked){ if(st.links[lid]) st.links[lid].delete(id); if(st.links[lid]&&st.links[lid].size===0) delete st.links[lid]; } }
+  delete st.links[id];
+}
+function linkTables(a,b){
+  if(!st.links[a]) st.links[a]=new Set();
+  if(!st.links[b]) st.links[b]=new Set();
+  st.links[a].add(b); st.links[b].add(a);
+}
+function getLinkedGroup(id){
+  // BFS to find all tables in the same connected group
+  const visited=new Set([id]), queue=[id];
+  while(queue.length){ const cur=queue.shift(); for(const n of (st.links[cur]||[])){ if(!visited.has(n)){visited.add(n);queue.push(n);} } }
+  return visited;
+}
+function snapDrop(dragId, dropL, dropT){
+  const dragPos = T[dragId]; if(!dragPos) return {l:dropL,t:dropT,linkId:null};
+  const SNAP = 14; let best=null, bestDist=Infinity;
+  const dragCX = dropL+dragPos.w/2, dragCY = dropT+dragPos.h/2;
+  for(const [idStr,pos] of Object.entries(T)){
+    const tid=+idStr; if(tid===dragId) continue;
+    const tl = st.movedPos[tid]?.l??pos.l, tt = st.movedPos[tid]?.t??pos.t;
+    const cx=tl+pos.w/2, cy=tt+pos.h/2;
+    const dist=Math.hypot(cx-dragCX,cy-dragCY);
+    if(dist<SNAP&&dist<bestDist){bestDist=dist;best={id:tid,l:tl,t:tt,w:pos.w,h:pos.h};}
+  }
+  if(!best) return {l:dropL,t:dropT,linkId:null};
+  const dx=dragCX-best.l-best.w/2, dy=dragCY-best.t-best.h/2;
+  let sl,st2;
+  if(Math.abs(dx)>Math.abs(dy)){
+    sl = dx>0 ? best.l+best.w+0.3 : best.l-dragPos.w-0.3;
+    st2= best.t+(best.h-dragPos.h)/2;
+  } else {
+    sl = best.l+(best.w-dragPos.w)/2;
+    st2= dy>0 ? best.t+best.h+0.3 : best.t-dragPos.h-0.3;
+  }
+  return {l:sl,t:st2,linkId:best.id};
+}
+
+// ── INTERACTION: tap + long-press-clear + drag-to-link (tables only)
+function addTableEvents(el, id, onTap){
+  let isDragging=false;
+  let startX, startY, ghost=null, ghostW, ghostH;
+  let activePointerId=null;
+  const THRESH=10;
+
+  const draggable = T[id]?.s === 'rect-v' || T[id]?.s === 'rect-v4';
+  const hOnly = id === 11 || id === 12 || id === 13 || id === 14 || id === 15;
+  const isDraggable = draggable || hOnly;
+
+  if(!isDraggable){
+    el.addEventListener('pointerdown', e=>{ el.classList.add('pressing'); });
+    el.addEventListener('pointerup',   e=>{ el.classList.remove('pressing'); });
+    el.addEventListener('pointerleave',e=>{ el.classList.remove('pressing'); });
+    el.addEventListener('click', ()=>{
+      if(document.getElementById('overlay').classList.contains('open')) return;
+      if(st._modalCooldown) return;
+      onTap();
+    });
+    el.addEventListener('contextmenu',e=>e.preventDefault());
+    return;
+  }
+
+  el.addEventListener('pointerdown', e=>{
+    if(document.getElementById('overlay').classList.contains('open')) return;
+    if(st._modalCooldown) return;
+    e.stopPropagation();
+    isDragging=false;
+    activePointerId=e.pointerId;
+    startX=e.clientX; startY=e.clientY;
+    el.setPointerCapture(e.pointerId);
+    _capturedEl=el; _capturedPid=e.pointerId;
+    el.classList.add('pressing');
+  });
+
+  el.addEventListener('pointermove', e=>{
+    if(e.pointerId!==activePointerId) return;
+    const moved=Math.hypot(e.clientX-startX,e.clientY-startY);
+    if(!isDragging && moved>THRESH){
+      isDragging=true;
+      const r=el.getBoundingClientRect();
+      ghostW=r.width; ghostH=r.height;
+      ghost=el.cloneNode(true);
+      ghost.style.cssText+=`;position:fixed;pointer-events:none;opacity:0.75;z-index:9999;width:${ghostW}px;height:${ghostH}px;transition:none;`;
+      document.body.appendChild(ghost);
+      el.style.opacity='0.2';
+    }
+    if(isDragging&&ghost){
+      ghost.style.left=(e.clientX-ghostW/2)+'px';
+      ghost.style.top=(hOnly ? el.getBoundingClientRect().top : e.clientY-ghostH/2)+'px';
+    }
+  });
+
+  el.addEventListener('pointerup', e=>{
+    if(e.pointerId!==activePointerId) return;
+    activePointerId=null;
+    el.style.opacity=''; el.style.filter='';
+    el.classList.remove('pressing');
+    if(ghost){ghost.remove();ghost=null;}
+    try{el.releasePointerCapture(e.pointerId);}catch(_){}
+    _capturedEl=null; _capturedPid=null;
+    if(st._modalCooldown){isDragging=false;return;}
+    if(isDragging){
+      const flrEl=document.getElementById('flr');
+      const rect=flrEl.getBoundingClientRect();
+      const pos=T[id];
+      const rawL=((e.clientX-rect.left)/rect.width*100)-pos.w/2;
+      const rawT=((e.clientY-rect.top)/rect.height*100)-pos.h/2;
+      const clampL=Math.max(0,Math.min(100-pos.w,rawL));
+      const clampT=hOnly ? pos.t : Math.max(0,Math.min(100-pos.h,rawT));
+      unlinkTable(id);
+      const {l,t,linkId}=snapDrop(id,clampL,clampT);
+      if(Math.abs(l-(T[id].l))>0.5||Math.abs(t-(T[id].t))>0.5) st.movedPos[id]={l,t};
+      else delete st.movedPos[id];
+      if(linkId) linkTables(id,linkId);
+      isDragging=false;
+      renderFloor(); renderStatus();
+    } else {
+      onTap();
+    }
+    isDragging=false;
+  });
+
+  el.addEventListener('pointercancel', e=>{
+    if(e.pointerId!==activePointerId) return;
+    activePointerId=null;
+    isDragging=false;
+    el.style.opacity='';
+    el.classList.remove('pressing');
+    if(ghost){ghost.remove();ghost=null;}
+    _capturedEl=null; _capturedPid=null;
+  });
+
+  el.addEventListener('contextmenu',e=>e.preventDefault());
+}
+
+// ── STOOL: long press to clear (no drag)
+function addLongPress(el, id, onTap){
+  let timer=null,didLong=false;
+  el.addEventListener('pointerdown',e=>{ didLong=false; timer=setTimeout(()=>{ didLong=true; if(st.tables[id]!==undefined){delete st.tables[id];renderFloor();renderStatus();} },600); });
+  el.addEventListener('pointerup',e=>{ clearTimeout(timer); if(!didLong) onTap(); });
+  el.addEventListener('pointerleave',()=>clearTimeout(timer));
+  el.addEventListener('contextmenu',e=>e.preventDefault());
+}
+function renderStatus(){
+  const tableIds  = Object.keys(T).map(Number);
+  const stoolIds  = Object.keys(STOOL_POS).map(Number);
+  const allIds    = [...tableIds, ...stoolIds];
+  const seated    = allIds.filter(id => st.tables[id] !== undefined).length;
+  const guests    = allIds.reduce((s,id)=>s+(st.tables[id]?.party||0),0);
+  const open      = tableIds.filter(id => st.tables[id] === undefined).length;
+  document.getElementById('ss').textContent=seated;
+  document.getElementById('sg').textContent=guests;
+  document.getElementById('so').textContent=open;
+  // Right-side totals: count unique seated groups and their total guests
+  // Each linked group counts as 1 table
+  const seenGroups = new Set();
+  let totalTables=0, totalGuests=0;
+  for(const id of allIds){
+    if(st.tables[id]===undefined) continue;
+    const group = st.links[id] && st.links[id].size>0 ? getLinkedGroup(id) : new Set([id]);
+    const groupKey = [...group].sort((a,b)=>a-b).join(',');
+    if(seenGroups.has(groupKey)) continue;
+    seenGroups.add(groupKey);
+    totalTables++;
+    const party = [...group].map(gid=>st.tables[gid]?.party||0).find(p=>p>0)||0;
+    totalGuests += party;
+  }
+  document.getElementById('total-tables').textContent=st.dailyTables;
+  document.getElementById('total-guests').textContent=st.dailyGuests;
+}
+
+// Open the shared modal in rotation mode (no table — just log to next-up server)
+// Open the seat modal for a bar stool (treated as a single-seat table)
+function openStoolModal(id, sec){
+  st.mTable = id;
+  st.mParty = st.tables[id]?.party ?? null;
+  st.rotMode = false;
+  const c = FLOOR_C[sec];
+  const seated = st.tables[id] !== undefined;
+  document.getElementById('m-title').textContent = `Bar`;
+  document.getElementById('m-title').style.color = c.bg;
+  const badge = document.getElementById('m-badge');
+  badge.textContent = `§${sec}`;
+  badge.style.cssText = `background:${c.bg};color:${c.tx};font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;`;
+  document.getElementById('m-srv').textContent = st.names[sec]||`Server ${sec}`;
+  document.querySelectorAll('.pb').forEach(b=>b.classList.toggle('on', +b.dataset.n===st.mParty && st.mParty!==null));
+  const btns = document.getElementById('mbtns');
+  if(seated){
+    btns.innerHTML=`<button class="mbtn-p" id="mb-go" style="background:${c.bg};color:${c.tx}">Update</button>
+      <button class="mbtn-d" id="mb-cl">Clear</button><button class="mbtn-g" id="mb-cx">✕</button>`;
+  } else {
+    btns.innerHTML=`<button class="mbtn-p" id="mb-go" style="background:${c.bg};color:${c.tx}" disabled>Seat</button>
+      <button class="mbtn-g" id="mb-cx">Cancel</button>`;
+  }
+  document.getElementById('mb-go').addEventListener('click', doSeat);
+  document.getElementById('mb-cx').addEventListener('click', closeModal);
+  const clr=document.getElementById('mb-cl'); if(clr) clr.addEventListener('click', doClear);
+  document.getElementById('overlay').classList.add('open');
+}
+
+function openRotModal(){
+  const s = activeTarget();
+  if(!s) return;
+  const c = FLOOR_C[s];
+  const name = st.names[s]||`Server ${s}`;
+  st.rotMode = true;
+  st.mTable = null;
+  st.mParty = null;
+  document.getElementById('m-title').textContent = name;
+  document.getElementById('m-title').style.color = c.bg;
+  const badge = document.getElementById('m-badge');
+  badge.textContent = `§${s}`;
+  badge.style.cssText = `background:${c.bg};color:${c.tx};font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;`;
+  document.getElementById('m-srv').textContent = 'Select party size';
+  document.querySelectorAll('.pb').forEach(b=>b.classList.remove('on'));
+  document.getElementById('mbtns').innerHTML =
+    `<button class="mbtn-g" id="mb-cx" style="flex:1;">Cancel</button>`;
+  document.getElementById('mb-cx').addEventListener('click', closeModal);
+  document.getElementById('overlay').classList.add('open');
+}
+
+// ── SEAT MODAL
+function openModal(id){
+  const group = getLinkedGroup(id);
+  st.mTable = id;
+  st.mGroup = group;
+
+  // Group tables by section
+  const secMap = new Map(); // sec -> [tableIds]
+  for(const gid of group){
+    const s = secOf(gid);
+    if(!s) continue;
+    if(!secMap.has(s)) secMap.set(s,[]);
+    secMap.get(s).push(gid);
+  }
+  const sections = [...secMap.entries()]; // [{sec, ids}]
+
+  // If group spans multiple sections, use stepped flow
+  if(sections.length > 1){
+    const anySeated = [...group].some(gid=>st.tables[gid]!==undefined);
+    if(!anySeated){
+      // Fresh seating — step through each server
+      st.mMultiSec = sections.map(([s,ids])=>({s,ids,party:null}));
+      st.mMultiStep = 0;
+      openModalStep();
+      return;
+    }
+    // Already seated — treat as single group for update/clear
+  }
+
+  // Single-section or already-seated group — existing flow
+  st.mMultiSec = null;
+  const s = secOf(id), c = FLOOR_C[s];
+  const anySeated = [...group].some(gid => st.tables[gid] !== undefined);
+  const existingParty = [...group].map(gid => st.tables[gid]?.party).find(p => p !== undefined) ?? null;
+  st.mParty = existingParty;
+
+  const title = group.size > 1 ? `Tables ${[...group].sort((a,b)=>a-b).join('+')}` : `Table ${id}`;
+  document.getElementById('m-title').textContent = title;
+  document.getElementById('m-title').style.color = c.bg;
+  const badge=document.getElementById('m-badge');
+  badge.textContent=`§${s}`;
+  badge.style.cssText=`background:${c.bg};color:${c.tx};font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;`;
+  document.getElementById('m-srv').textContent=st.names[s]||`Server ${s}`;
+  document.querySelectorAll('.pb').forEach(b=>b.classList.toggle('on', +b.dataset.n === st.mParty && st.mParty !== null));
+  const btns=document.getElementById('mbtns');
+  const hasMoved = [...group].some(gid => st.movedPos[gid]);
+  if(anySeated){
+    btns.innerHTML=`<button class="mbtn-p" id="mb-go" style="background:${c.bg};color:${c.tx}">Update</button>
+      <button class="mbtn-d" id="mb-cl">Clear</button>
+      ${hasMoved?`<button class="mbtn-g" id="mb-ret" style="font-size:11px;">↩</button>`:''}
+      <button class="mbtn-g" id="mb-cx">✕</button>`;
+  } else {
+    btns.innerHTML=`<button class="mbtn-p" id="mb-go" style="background:${c.bg};color:${c.tx}" disabled>Seat</button>
+      ${hasMoved?`<button class="mbtn-g" id="mb-ret" style="font-size:11px;">↩ Reset pos</button>`:''}
+      <button class="mbtn-g" id="mb-cx">Cancel</button>`;
+  }
+  document.getElementById('mb-go').addEventListener('click', doSeat);
+  document.getElementById('mb-cx').addEventListener('click', closeModal);
+  const clr=document.getElementById('mb-cl'); if(clr) clr.addEventListener('click', doClear);
+  const ret=document.getElementById('mb-ret');
+  if(ret) ret.addEventListener('click', ()=>{
+    for(const gid of group){ delete st.movedPos[gid]; unlinkTable(gid); }
+    closeModal(); renderFloor(); renderStatus();
+  });
+
+  // Timer
+  clearInterval(st._timerInterval);
+  const timerEl = document.getElementById('m-timer');
+  const seatedAt = [...group].map(gid=>st.tables[gid]?.seatedAt).find(t=>t);
+  if(seatedAt && anySeated){
+    timerEl.style.cssText='display:block;font-family:\'IBM Plex Mono\',monospace;font-size:22px;font-weight:700;text-align:center;margin-bottom:14px;letter-spacing:2px;color:'+c.bg;
+    function fmtTime(ms){ const tot=Math.floor(ms/1000),m=Math.floor(tot/60),h=Math.floor(m/60);
+      return h>0?`${h}:${String(m%60).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}`:
+                 `${String(m).padStart(2,'0')}:${String(tot%60).padStart(2,'0')}`; }
+    timerEl.textContent=fmtTime(Date.now()-seatedAt);
+    st._timerInterval=setInterval(()=>{ timerEl.textContent=fmtTime(Date.now()-seatedAt); },1000);
+  } else {
+    timerEl.style.display='none';
+  }
+
+  document.getElementById('overlay').classList.add('open');
+}
+
+// Step modal for multi-server grouped tables
+function openModalStep(){
+  const step = st.mMultiSec[st.mMultiStep];
+  const s = step.s, c = FLOOR_C[s];
+  const stepNum = st.mMultiStep + 1, total = st.mMultiSec.length;
+  const tableList = step.ids.sort((a,b)=>a-b).join(', ');
+
+  document.getElementById('m-title').textContent = `Table${step.ids.length>1?'s':''} ${tableList}`;
+  document.getElementById('m-title').style.color = c.bg;
+  const badge = document.getElementById('m-badge');
+  badge.textContent = `§${s}`;
+  badge.style.cssText=`background:${c.bg};color:${c.tx};font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;`;
+  document.getElementById('m-srv').textContent = `${st.names[s]||`Server ${s}`}  (${stepNum}/${total})`;
+  document.getElementById('m-timer').style.display='none';
+
+  // Reset party buttons
+  document.querySelectorAll('.pb').forEach(b=>b.classList.remove('on'));
+  st.mParty = null;
+
+  const hasMoved = st.mGroup && [...st.mGroup].some(gid=>st.movedPos[gid]);
+  document.getElementById('mbtns').innerHTML =
+    `${hasMoved?`<button class="mbtn-g" id="mb-ret" style="font-size:11px;">↩ Reset pos</button>`:''}
+     <button class="mbtn-g" id="mb-cx">Cancel</button>`;
+
+  // No Next button — auto-advances on party size tap
+  if(hasMoved){
+    document.getElementById('mb-ret').addEventListener('click', ()=>{
+      for(const gid of st.mGroup){ delete st.movedPos[gid]; unlinkTable(gid); }
+      closeModal(); renderFloor(); renderStatus();
+    });
+  }
+  document.getElementById('mb-cx').addEventListener('click', closeModal);
+
+  document.getElementById('overlay').classList.add('open');
+}
+
+// Shared seating logic — seats a table/stool by ID with a given party size
+// secOverride lets stools pass their section since they aren't in the T layout map
+function doSeatTable(id, party, secOverride){
+  const prevParty = st.tables[id]?.party || null;
+  const prevSeatedAt = st.tables[id]?.seatedAt || null;
+  st.tables[id] = {party, seatedAt: prevParty ? prevSeatedAt : Date.now()};
+  const s = secOverride || secOf(id);
+  if(s && party !== 0){
+    if(!prevParty){
+      const type = party===1 ? 'S' : party>=5 ? 'XL' : 'X';
+      addEventToSec(s, type, party);
+    } else if(prevParty !== 0 && prevParty !== party){
+      if(!st.guestTotals[s]) st.guestTotals[s] = 0;
+      st.guestTotals[s] += (party - prevParty);
+      renderRot();
+    }
+  }
+  renderFloor(); renderStatus();
+}
+
+function clearAllPressing(){
+  document.querySelectorAll('.pressing').forEach(el=>el.classList.remove('pressing'));
+}
+
+function closeModal(){
+  clearInterval(st._timerInterval);
+  document.getElementById('overlay').classList.remove('open');
+  st.mTable=null; st.mParty=null; st.mGroup=null; st.mMultiSec=null; st.mMultiStep=0; st.rotMode=false;
+  releaseAnyCapture();
+  clearAllPressing();
+  if(document.activeElement) document.activeElement.blur();
+  st._modalCooldown = true;
+  setTimeout(()=>{ st._modalCooldown = false; }, 300);
+  renderFloor();
+}
+
+function doSeat(){
+  if(st.mParty === null) return;
+  const group = st.mGroup || new Set([st.mTable]);
+  const isStool = STOOL_POS[st.mTable];
+  if(isStool){
+    const stoolSec = stoolSecOf(st.mTable);
+    doSeatTable(st.mTable, st.mParty, stoolSec);
+  } else {
+    // For a group, seat all members but only log rotation once (for the primary table)
+    const ids = [...group].sort((a,b)=>a-b);
+    const primary = ids[0];
+    const prevParty = [...group].map(gid=>st.tables[gid]?.party).find(p=>p!==undefined)??null;
+    // Set all members to same party
+    const prevSeatedAt = [...group].map(g=>st.tables[g]?.seatedAt).find(t=>t) || Date.now();
+    for(const gid of ids) st.tables[gid] = {party: st.mParty, seatedAt: prevParty ? prevSeatedAt : Date.now()};
+    // Log rotation once — skip if "In Use" (party === 0)
+    const s = secOf(primary);
+    if(s && st.mParty !== 0 && !prevParty){
+      const type = st.mParty===1 ? 'S' : st.mParty>=5 ? 'XL' : 'X';
+      addEventToSec(s, type, st.mParty);
+    } else if(s && st.mParty !== 0 && prevParty && prevParty !== 0 && prevParty !== st.mParty){
+      if(!st.guestTotals[s]) st.guestTotals[s]=0;
+      st.guestTotals[s] += (st.mParty - prevParty);
+      renderRot();
+    }
+    renderFloor(); renderStatus();
+  }
+  closeModal();
+}
+
+function doClear(){
+  const group = st.mGroup || new Set([st.mTable]);
+  for(const gid of group){
+    delete st.tables[gid];
+    delete st.movedPos[gid];
+  }
+  // Unlink everyone in the group from each other and from outsiders
+  for(const gid of group) unlinkTable(gid);
+  closeModal(); renderFloor(); renderStatus();
+}
+
+document.querySelectorAll('.pb').forEach(b=>{
+  b.addEventListener('click',()=>{
+    st.mParty = b.dataset.n === '' ? null : +b.dataset.n;
+    document.querySelectorAll('.pb').forEach(x=>x.classList.toggle('on', +x.dataset.n===st.mParty && st.mParty!==null));
+
+    // Multi-step mode: save selection and auto-advance
+    if(st.mMultiSec){
+      st.mMultiSec[st.mMultiStep].party = st.mParty;
+      const isLast = st.mMultiStep === st.mMultiSec.length - 1;
+      if(!isLast){
+        st.mMultiStep++;
+        openModalStep();
+      } else {
+        // All steps done — seat each group
+        const now = Date.now();
+        for(const entry of st.mMultiSec){
+          if(entry.party === null) continue;
+          for(const gid of entry.ids) st.tables[gid] = {party: entry.party, seatedAt: now};
+          if(entry.party !== 0){
+            const type = entry.party===1?'S':entry.party>=5?'XL':'X';
+            addEventToSec(entry.s, type, entry.party);
+          }
+        }
+        closeModal(); renderFloor(); renderStatus();
+      }
+      return;
+    }
+
+    if(st.rotMode && st.mParty !== null){
+      const n = st.mParty;
+      const type = n===1 ? 'S' : n>=5 ? 'XL' : 'X';
+      addEvent(type, n);
+      closeModal();
+    } else if(!st.rotMode){
+      const group = st.mGroup || new Set([st.mTable]);
+      const anySeated = [...group].some(gid => st.tables[gid] !== undefined);
+      if(!anySeated && st.mParty !== null){
+        if(STOOL_POS[st.mTable]){
+          doSeatTable(st.mTable, st.mParty, stoolSecOf(st.mTable));
+        } else {
+          doSeat();
+          return;
+        }
+        closeModal();
+      } else {
+        const gb=document.getElementById('mb-go'); if(gb) gb.disabled=false;
+      }
+    }
+  });
+});
+
+document.getElementById('act-seat').addEventListener('click', openRotModal);
+document.getElementById('act-d').addEventListener('click', ()=>{ addEvent('D', 1); });
+
+document.getElementById('sct-sel').addEventListener('change', e=>{
+  const newCount = +e.target.value;
+  const oldCount = st.servers;
+
+  if(newCount < oldCount){
+    for(let s = newCount+1; s <= oldCount; s++){
+      delete st.events[s];
+      delete st.guestTotals[s];
+      st.newServers.delete(s);
+    }
+    for(const [tid] of Object.entries(st.tables)){
+      let found = false;
+      for(let s=1; s<=newCount; s++){
+        if((L[newCount][s]||[]).includes(+tid)){ found=true; break; }
+      }
+      if(!found) delete st.tables[tid];
+    }
+    if(st.selectedSec > newCount) st.selectedSec = null;
+
+  } else if(newCount > oldCount){
+    let totalGuests = 0;
+    for(let s=1; s<=oldCount; s++) totalGuests += secGuestScore(s);
+    const avgGuests = oldCount > 0 ? totalGuests / oldCount : 0;
+    for(let s = oldCount+1; s <= newCount; s++){
+      st.guestTotals[s] = avgGuests;
+      if(!st.events[s]) st.events[s] = [];
+      st.newServers.add(s);
+    }
+  }
+
+  st.servers = newCount;
+  st.selectedSec = null;
+  clearUnassignedStools();
+  renderAll();
+});
+let clrArmed = false, clrTimer = null;
+document.getElementById('btn-clr').addEventListener('click',()=>{
+  if(clrArmed){
+    clearTimeout(clrTimer);
+    clrArmed = false;
+    document.getElementById('btn-clr').textContent = '✕ Clear All';
+    st.tables={}; st.events={}; st.movedPos={}; st.links={}; st.guestTotals={}; st.dailyTables=0; st.dailyGuests=0; st.newServers=new Set(); st.selectedSec=null; st.mGroup=null;
+    closeModal();
+    renderAll();
+  } else {
+    clrArmed = true;
+    document.getElementById('btn-clr').textContent = 'Tap again to confirm';
+    clrTimer = setTimeout(()=>{
+      clrArmed = false;
+      document.getElementById('btn-clr').textContent = '✕ Clear All';
+    }, 3000);
+  }
+});
+document.getElementById('overlay').addEventListener('click', e=>{
+  if(e.target===document.getElementById('overlay')) closeModal();
+});
+// Debounced resize — avoids layout thrash on iPad orientation change
+let _resizeTimer;
+window.addEventListener('resize', ()=>{ clearTimeout(_resizeTimer); _resizeTimer=setTimeout(renderFloor,150); });
+
+// Prevent pull-to-refresh / scroll bounce on floor and rotation panel
+document.addEventListener('touchmove', e=>{
+  if(e.target.closest('#flr-wrap,#panel-rot')) e.preventDefault();
+}, {passive:false});
+// Clear any stuck pointer/active state when touching outside a table
+document.addEventListener('pointerup', ()=>{
+  if(st._modalCooldown) releaseAnyCapture();
+});
+
+function renderBanner(){
+  const dot    = document.getElementById('next-banner-dot');
+  const nameEl = document.getElementById('next-banner-name');
+  const banner = document.getElementById('next-banner');
+  const upcoming = document.getElementById('next-banner-upcoming');
+
+  // Find next 3 in rotation order (first = next up, 2nd & 3rd shown as dots)
+  const secs = Array.from({length:st.servers},(_,i)=>i+1);
+  const sorted = [...secs].sort((a,b)=>secGuestScore(a)-secGuestScore(b));
+  // Respect new-server priority
+  const newArr = sorted.filter(s=>st.newServers.has(s));
+  const rest   = sorted.filter(s=>!st.newServers.has(s));
+  const ordered = [...newArr, ...rest];
+
+  const next = ordered[0] || null;
+  const next2 = ordered[1] || null;
+  const next3 = ordered[2] || null;
+
+  if(!next){
+    dot.style.cssText='width:18px;height:18px;border-radius:4px;flex-shrink:0;background:transparent;';
+    nameEl.textContent='—'; nameEl.style.color='var(--dim)';
+    banner.style.background='var(--surf)';
+    upcoming.innerHTML='';
+    return;
+  }
+
+  const c = FLOOR_C[next];
+  dot.style.cssText=`width:18px;height:18px;border-radius:4px;flex-shrink:0;background:${c.bg};`;
+  nameEl.textContent = st.names[next]||`Server ${next}`;
+  nameEl.style.color = c.bg;
+  banner.style.background = tintSurf(c.bg);
+
+  // Upcoming dots
+  upcoming.innerHTML='';
+  for(const s of [next2, next3]){
+    if(!s) continue;
+    const sc = FLOOR_C[s];
+    const wrap = document.createElement('div');
+    wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px;';
+    const d = document.createElement('div');
+    d.style.cssText=`width:14px;height:14px;border-radius:3px;background:${sc.bg};`;
+    const lbl = document.createElement('div');
+    lbl.style.cssText=`font-size:8px;font-family:'IBM Plex Mono',monospace;color:${sc.bg};font-weight:700;`;
+    lbl.textContent = st.names[s]||`§${s}`;
+    wrap.appendChild(d);
+    wrap.appendChild(lbl);
+    upcoming.appendChild(wrap);
+  }
+}
+
+function renderAll(){
+  renderLegend(); renderFloor(); renderStatus(); renderRot(); renderBanner();
+  pushToFirebase();
+}
+
+renderAll();
+
+// ── FIREBASE SYNC ──────────────────────────────────────────
+window.addEventListener('load', function initFirebase(){
+  if(typeof firebase === 'undefined'){
+    console.warn('Firebase SDK not loaded — running in offline mode');
+    return;
+  }
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAEn57HJOCruLT9JRHFsd62gmqVID6EU74",
+    authDomain: "table-tracker-e9afa.firebaseapp.com",
+    databaseURL: "https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "table-tracker-e9afa",
+    storageBucket: "table-tracker-e9afa.firebasestorage.app",
+    messagingSenderId: "815486774012",
+    appId: "1:815486774012:web:82191acbbdba2734d3c579"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const shiftRef = db.ref('shift');
+
+  // Serialize state for Firebase (convert Sets → arrays)
+  function stateToDB(){
+    return {
+      servers:     st.servers,
+      names:       st.names,
+      tables:      st.tables,
+      movedPos:    st.movedPos,
+      links:       Object.fromEntries(Object.entries(st.links).map(([k,v])=>[k,[...v]])),
+      guestTotals: st.guestTotals,
+      dailyTables: st.dailyTables,
+      dailyGuests: st.dailyGuests,
+      newServers:  [...st.newServers],
+      events:      st.events,
+      selectedSec: st.selectedSec ?? null
+    };
+  }
+
+  // Deserialize from Firebase back into state
+  function dbToState(data){
+    if(!data) return;
+    _fbSyncing = true;
+    st.servers     = data.servers     ?? st.servers;
+    st.names       = data.names       ?? st.names;
+    st.tables      = data.tables      ?? {};
+    st.movedPos    = data.movedPos    ?? {};
+    st.guestTotals = data.guestTotals ?? {};
+    st.dailyTables = data.dailyTables ?? 0;
+    st.dailyGuests = data.dailyGuests ?? 0;
+    st.newServers  = new Set(data.newServers ?? []);
+    st.events      = data.events      ?? {};
+    st.selectedSec = data.selectedSec ?? null;
+    st.links = {};
+    for(const [k,v] of Object.entries(data.links ?? {}))
+      st.links[+k] = new Set(v);
+    document.getElementById('sct-sel').value = st.servers;
+    renderAll();
+    _fbSyncing = false;
+  }
+
+  // Wire up real pushToFirebase now that Firebase is ready
+  pushToFirebase = function(){
+    if(_fbSyncing) return;
+    clearTimeout(_fbPushTimer);
+    _fbPushTimer = setTimeout(()=>{ shiftRef.set(stateToDB()); }, 300);
+  };
+
+  // Listen for remote changes from other devices
+  shiftRef.on('value', snap=>{
+    if(_fbSyncing) return;
+    dbToState(snap.val());
+  });
+
+  // Connection status dot in header
+  const syncDot = document.createElement('div');
+  syncDot.style.cssText = 'width:8px;height:8px;border-radius:50%;background:#888;flex-shrink:0;margin-left:4px;transition:background .3s;';
+  syncDot.title = 'Connecting…';
+  document.getElementById('hdr').appendChild(syncDot);
+  db.ref('.info/connected').on('value', snap=>{
+    syncDot.style.background = snap.val() ? '#3FBD5A' : '#E84040';
+    syncDot.title = snap.val() ? 'Synced' : 'Offline';
+  });
+});
+
+</script>
+</body>
+</html>
