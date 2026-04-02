@@ -1349,46 +1349,29 @@ function renderAll(){
 
 renderAll();
 
-// ── FIREBASE SYNC ──────────────────────────────────────────
-function initFirebase(){
-  if(typeof firebase === 'undefined'){
-    console.warn('Firebase SDK not loaded — running in offline mode');
-    return;
-  }
+// ── FIREBASE SYNC (REST API — no SDK required) ──────────────
+const FB_URL = 'https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app/shift';
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyAEn57HJOCruLT9JRHFsd62gmqVID6EU74",
-    authDomain: "table-tracker-e9afa.firebaseapp.com",
-    databaseURL: "https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "table-tracker-e9afa",
-    storageBucket: "table-tracker-e9afa.firebasestorage.app",
-    messagingSenderId: "815486774012",
-    appId: "1:815486774012:web:82191acbbdba2734d3c579"
+// Serialize state for Firebase
+function stateToDB(){
+  return {
+    servers:     st.servers,
+    names:       st.names,
+    tables:      st.tables,
+    movedPos:    st.movedPos,
+    links:       Object.fromEntries(Object.entries(st.links).map(([k,v])=>[k,[...v]])),
+    guestTotals: st.guestTotals,
+    dailyTables: st.dailyTables,
+    dailyGuests: st.dailyGuests,
+    newServers:  [...st.newServers],
+    selectedSec: st.selectedSec ?? null
   };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-  const shiftRef = db.ref('shift');
+}
 
-  // Serialize state for Firebase (convert Sets → arrays)
-  function stateToDB(){
-    return {
-      servers:     st.servers,
-      names:       st.names,
-      tables:      st.tables,
-      movedPos:    st.movedPos,
-      links:       Object.fromEntries(Object.entries(st.links).map(([k,v])=>[k,[...v]])),
-      guestTotals: st.guestTotals,
-      dailyTables: st.dailyTables,
-      dailyGuests: st.dailyGuests,
-      newServers:  [...st.newServers],
-      events:      st.events,
-      selectedSec: st.selectedSec ?? null
-    };
-  }
-
-  // Deserialize from Firebase back into state
-  function dbToState(data){
-    if(!data) return;
+// Deserialize Firebase data into local state and re-render
+function dbToState(data){
+  if(!data) return;
+  try{
     _fbSyncing = true;
     st.servers     = data.servers     ?? st.servers;
     st.names       = data.names       ?? st.names;
@@ -1398,43 +1381,67 @@ function initFirebase(){
     st.dailyTables = data.dailyTables ?? 0;
     st.dailyGuests = data.dailyGuests ?? 0;
     st.newServers  = new Set(data.newServers ?? []);
-    st.events      = data.events      ?? {};
     st.selectedSec = data.selectedSec ?? null;
     st.links = {};
     for(const [k,v] of Object.entries(data.links ?? {}))
       st.links[+k] = new Set(v);
     document.getElementById('sct-sel').value = st.servers;
     _fbSyncing = false;
-    renderOnly(); // render without pushing back to Firebase
+    renderOnly();
+  } catch(e){
+    _fbSyncing = false;
+    console.error('[FB] dbToState error:', e);
   }
-
-  // Wire up real pushToFirebase now that Firebase is ready
-  pushToFirebase = function(){
-    if(_fbSyncing) return;
-    clearTimeout(_fbPushTimer);
-    _fbPushTimer = setTimeout(()=>{ shiftRef.set(stateToDB()); }, 300);
-  };
-
-  // Listen for remote changes from other devices
-  shiftRef.on('value', snap=>{
-    if(_fbSyncing) return;
-    dbToState(snap.val());
-  });
-
-  // Connection status dot in header
-  const syncDot = document.createElement('div');
-  syncDot.style.cssText = 'width:8px;height:8px;border-radius:50%;background:#888;flex-shrink:0;margin-left:4px;transition:background .3s;';
-  syncDot.title = 'Connecting…';
-  document.getElementById('hdr').appendChild(syncDot);
-  db.ref('.info/connected').on('value', snap=>{
-    syncDot.style.background = snap.val() ? '#3FBD5A' : '#E84040';
-    syncDot.title = snap.val() ? 'Synced' : 'Offline';
-  });
 }
 
+// Write state to Firebase using REST PUT
+pushToFirebase = function(){
+  if(_fbSyncing) return;
+  clearTimeout(_fbPushTimer);
+  _fbPushTimer = setTimeout(()=>{
+    fetch(FB_URL + '.json', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(stateToDB())
+    })
+    .then(r => { setSyncDot(r.ok); })
+    .catch(()=> setSyncDot(false));
+  }, 300);
+};
+
+// Sync indicator dot
+const syncDot = document.createElement('div');
+syncDot.style.cssText = 'width:8px;height:8px;border-radius:50%;background:#888;flex-shrink:0;margin-left:4px;';
+document.getElementById('hdr').appendChild(syncDot);
+function setSyncDot(ok){
+  syncDot.style.background = ok ? '#3FBD5A' : '#E84040';
+  syncDot.title = ok ? 'Synced' : 'Offline';
+}
+
+// Listen for real-time changes using Firebase SSE (EventSource)
+function startSync(){
+  const evtSource = new EventSource(FB_URL + '.json');
+  evtSource.addEventListener('put', e => {
+    try{
+      const msg = JSON.parse(e.data);
+      if(!_fbSyncing) dbToState(msg.data);
+      setSyncDot(true);
+    } catch(err){ console.error('[FB] SSE parse error', err); }
+  });
+  evtSource.addEventListener('patch', e => {
+    try{
+      const msg = JSON.parse(e.data);
+      if(!_fbSyncing) dbToState(msg.data);
+    } catch(err){}
+  });
+  evtSource.onerror = () => {
+    setSyncDot(false);
+    evtSource.close();
+    // Reconnect after 3 seconds
+    setTimeout(startSync, 3000);
+  };
+}
+startSync();
 </script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-<script>initFirebase();</script>
 </body>
 </html>
