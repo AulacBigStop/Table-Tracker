@@ -27,12 +27,16 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
   display:flex;align-items:center;padding:0 12px;gap:10px;}
 #logo{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);letter-spacing:1px;white-space:nowrap;}
 .vdiv{width:1px;height:20px;background:var(--border);}
-.hctl{display:flex;align-items:center;gap:6px;background:var(--surf2);border:1px solid var(--border);border-radius:7px;padding:4px 10px;}
+.hctl{display:flex;align-items:center;gap:6px;background:var(--surf2);border:1px solid var(--border);border-radius:7px;padding:4px 8px;}
 .hctl label{font-size:10px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.6px;}
-#sct-sel{background:transparent;border:none;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;cursor:pointer;outline:none;-webkit-appearance:none;width:28px;}
-#sct-sel option{background:#1a1a1a;}
+.srv-adj-btn{width:34px;height:34px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);
+  color:#fff;font-size:20px;font-weight:700;cursor:pointer;line-height:1;padding:0;font-family:'IBM Plex Mono',monospace;}
+.srv-adj-btn:active{background:rgba(255,255,255,0.18);}
+#srv-count{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;color:#fff;min-width:22px;text-align:center;}
 #btn-clr{margin-left:auto;padding:6px 10px;border-radius:7px;border:1px solid rgba(255,80,80,0.3);background:rgba(255,80,80,0.07);color:#ff6060;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'IBM Plex Sans',sans-serif;}
 #btn-clr:active{background:rgba(255,80,80,0.2);}
+#btn-reset-pos{margin-left:auto;padding:6px 10px;border-radius:7px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:var(--dim);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'IBM Plex Sans',sans-serif;}
+#btn-reset-pos:active{background:rgba(255,255,255,0.12);}
 
 /* MAIN — side by side */
 #main{flex:1;display:flex;flex-direction:row;overflow:hidden;min-height:0;}
@@ -72,7 +76,7 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
 #next-banner-name{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:700;
   color:#fff;letter-spacing:1px;white-space:nowrap;}
 /* RIGHT — ROTATION (fixed narrow column) */
-#panel-rot{width:190px;min-width:190px;flex-shrink:0;display:flex;flex-direction:column;min-height:0;}
+#panel-rot{width:220px;min-width:220px;flex-shrink:0;display:flex;flex-direction:column;min-height:0;}
 #rot-header{padding:6px 10px;background:var(--surf);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;}
 #rot-title{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:1px;}
 
@@ -93,23 +97,32 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
 
 /* top line: badge + name */
 .sec-row-top{display:flex;align-items:center;gap:4px;margin-bottom:2px;}
-.sec-badge{width:22px;min-width:22px;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;
-  font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;flex-shrink:0;}
+.sec-badge{width:26px;min-width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;
+  font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;flex-shrink:0;}
 .sec-name-col{flex:1;min-width:0;overflow:hidden;}
 .next-lbl{font-size:7px;color:var(--accent);font-weight:700;letter-spacing:.4px;line-height:1;display:block;}
 .sel-lbl{font-size:7px;color:#fff;font-weight:700;letter-spacing:.4px;line-height:1;display:block;}
-.sec-name-inp{font-size:12px;font-weight:600;color:var(--text);border:none;background:transparent;outline:none;
+.sec-name-inp{font-size:14px;font-weight:600;color:var(--text);border:none;background:transparent;outline:none;
   border-bottom:1px dashed rgba(255,255,255,0.12);width:100%;padding:0;font-family:'IBM Plex Sans',sans-serif;cursor:text;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .sec-name-inp:focus{border-bottom-color:var(--accent);}
 
 /* bottom line: − score + */
 .sec-row-bot{display:flex;align-items:center;gap:3px;}
-.sec-score{flex:1;font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;text-align:center;}
-.sec-adj-btn{flex:0 0 30px;height:26px;border-radius:5px;border:1px solid rgba(255,255,255,0.12);
-  background:rgba(255,255,255,0.06);color:var(--dim);font-size:15px;line-height:1;
+.sec-score{flex:1;font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:700;text-align:center;}
+.sec-adj-btn{flex:0 0 34px;height:30px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.06);color:var(--dim);font-size:18px;line-height:1;
   cursor:pointer;padding:0;font-family:'IBM Plex Mono',monospace;font-weight:700;}
 .sec-adj-btn:active{background:rgba(255,255,255,0.14);}
+.sec-row.on-break{opacity:1;background:rgba(255,165,0,0.07);outline:1.5px solid rgba(255,165,0,0.25);border-radius:6px;}
+.sec-row.on-break .sec-badge{opacity:0.4;filter:grayscale(1);}
+.sec-row.on-break .sec-name-inp{opacity:0.45;text-decoration:line-through;}
+.sec-row.on-break .sec-score{opacity:0.35;}
+.sec-row.on-break .sec-adj-btn{opacity:0.3;pointer-events:none;}
+.break-btn{flex:0 0 26px;height:26px;border-radius:5px;border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.04);color:var(--dim);font-size:13px;line-height:1;
+  cursor:pointer;padding:0;margin-left:2px;}
+.break-btn.active{background:rgba(255,165,0,0.25);color:#FFA500;border-color:rgba(255,165,0,0.6);box-shadow:0 0 6px rgba(255,165,0,0.3);}
 
 /* ACTION BAR */
 #rot-actions{flex-shrink:0;background:var(--surf);border-top:1px solid var(--border);padding:7px 8px;display:flex;flex-direction:column;gap:5px;}
@@ -125,6 +138,16 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
 .act-d{background:rgba(180,130,255,0.14);color:#b482ff;border:1.5px solid rgba(180,130,255,0.38);}
 
 /* TABLE SEAT MODAL */
+#confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:600;align-items:center;justify-content:center;}
+#confirm-overlay.open{display:flex;}
+#confirm-box{background:#17171f;border:1px solid rgba(255,255,255,0.11);border-radius:14px;padding:20px;width:min(280px,88vw);
+  display:flex;flex-direction:column;gap:14px;align-items:center;}
+#confirm-msg{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;color:#eee;text-align:center;line-height:1.5;}
+#confirm-btns{display:flex;gap:10px;width:100%;}
+#confirm-yes{flex:1;padding:12px;border-radius:9px;border:none;background:rgba(255,165,0,0.2);color:#FFA500;
+  font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;cursor:pointer;border:1.5px solid rgba(255,165,0,0.4);}
+#confirm-no{flex:1;padding:12px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);
+  color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;cursor:pointer;}
 #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);
   z-index:500;align-items:center;justify-content:center;-webkit-overflow-scrolling:touch;}
 #overlay.open{display:flex;}
@@ -159,12 +182,11 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
   <div class="vdiv"></div>
   <div class="hctl">
     <label>Servers</label>
-    <select id="sct-sel">
-      <option value="2">2</option><option value="3">3</option><option value="4">4</option>
-      <option value="5">5</option><option value="6">6</option><option value="7" selected>7</option>
-      <option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option>
-    </select>
+    <button id="srv-dec" class="srv-adj-btn">−</button>
+    <span id="srv-count">7</span>
+    <button id="srv-inc" class="srv-adj-btn">+</button>
   </div>
+  <button id="btn-reset-pos">↩ Reset Tables</button>
   <button id="btn-clr">✕ Clear All</button>
 </div>
 
@@ -201,6 +223,17 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
         <button class="act-btn act-seat" id="act-seat">＋ Seat<span class="act-lbl">Choose party size</span></button>
         <button class="act-btn act-d"   id="act-d"   >−<span class="act-lbl">Skip</span></button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- BREAK CONFIRM -->
+<div id="confirm-overlay">
+  <div id="confirm-box">
+    <div id="confirm-msg"></div>
+    <div id="confirm-btns">
+      <button id="confirm-no">Cancel</button>
+      <button id="confirm-yes">Confirm</button>
     </div>
   </div>
 </div>
@@ -292,9 +325,10 @@ const st = {
   dailyTables:0,       // total tables seated today
   dailyGuests:0,       // total guests seated today
   newServers: new Set(),
+  onBreak: new Set(),
   selectedSec: null,
   rotMode: false,
-  mTable:null, mParty:null, mGroup:null, mMultiSec:null, mMultiStep:0,
+  mTable:null, mParty:null, mGroup:null, mMultiSec:null, mMultiStep:0, mOverrideSec:null,
   _timerInterval:null, _modalCooldown:false
 };
 
@@ -341,13 +375,17 @@ function nextUp(){
     let min=Infinity, best=null;
     for(const s of st.newServers){
       if(s > st.servers) continue;
+      if(st.onBreak.has(s)) continue;
       const sc=secGuestScore(s); if(sc<min){min=sc;best=s;}
     }
     if(best !== null) return best;
   }
-  // Lowest guest total is next up
+  // Lowest guest total is next up (skip on-break servers)
   let min=Infinity, best=null;
-  for(let s=1;s<=st.servers;s++){const sc=secGuestScore(s);if(sc<min){min=sc;best=s;}}
+  for(let s=1;s<=st.servers;s++){
+    if(st.onBreak.has(s)) continue;
+    const sc=secGuestScore(s);if(sc<min){min=sc;best=s;}
+  }
   return best;
 }
 // The section that will receive the next button press
@@ -399,8 +437,9 @@ function renderRot(){
     const col    = FLOOR_C[s];
     const name   = st.names[s]||`Server ${s}`;
 
+    const isOnBreak = st.onBreak.has(s);
     const row = document.createElement('div');
-    row.className = 'sec-row' + (isNext?' next-up':'') + (isSel?' selected':'');
+    row.className = 'sec-row' + (isNext?' next-up':'') + (isSel?' selected':'') + (isOnBreak?' on-break':'');
     rowEls[s] = row;
     row.addEventListener('click', e => { if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON') return; selectSec(s); });
 
@@ -416,6 +455,7 @@ function renderRot(){
     const nameCol = document.createElement('div');
     nameCol.className = 'sec-name-col';
     if(isSel){ const sl=document.createElement('div');sl.className='sel-lbl';sl.textContent='● SELECTED';nameCol.appendChild(sl); }
+    else if(isOnBreak){ const bl=document.createElement('div');bl.className='next-lbl';bl.style.cssText='color:#FFA500;font-size:9px;letter-spacing:.5px;';bl.textContent='☕ ON BREAK';nameCol.appendChild(bl); }
     else if(st.newServers.has(s)){ const nl=document.createElement('div');nl.className='next-lbl';nl.textContent='★ NEW · NEXT UP';nameCol.appendChild(nl); }
     else if(isNext){ const nl=document.createElement('div');nl.className='next-lbl';nl.textContent='NEXT UP';nameCol.appendChild(nl); }
     const ni = document.createElement('input');
@@ -449,6 +489,31 @@ function renderRot(){
     rowBot.appendChild(btnMinus);
     rowBot.appendChild(scoreEl);
     rowBot.appendChild(btnPlus);
+
+    const btnBreak = document.createElement('button');
+    btnBreak.textContent = '☕';
+    btnBreak.className = 'break-btn' + (isOnBreak ? ' active' : '');
+    btnBreak.title = isOnBreak ? 'End break' : 'Mark on break';
+    btnBreak.addEventListener('click', ev => {
+      ev.stopPropagation();
+      const name = st.names[s] || `Server ${s}`;
+      const isBreak = st.onBreak.has(s);
+      const msg = isBreak ? `Return ${name} from break?` : `Put ${name} on break?`;
+      showConfirm(msg, ()=>{
+        if(isBreak){
+          st.onBreak.delete(s);
+          const activeSecs = Array.from({length:st.servers},(_,i)=>i+1).filter(x=>!st.onBreak.has(x) && x!==s);
+          if(activeSecs.length > 0){
+            const avg = activeSecs.reduce((sum,x)=>sum+(st.guestTotals[x]||0),0) / activeSecs.length;
+            st.guestTotals[s] = Math.round(avg);
+          }
+        } else {
+          st.onBreak.add(s);
+        }
+        renderRot();
+      });
+    });
+    rowBot.appendChild(btnBreak);
 
     row.appendChild(rowTop);
     row.appendChild(rowBot);
@@ -576,7 +641,10 @@ function renderFloor(){
 
   for(const [idStr,pos] of Object.entries(T)){
     const id=+idStr, s=secOf(id); if(!s) continue;
-    const c=FLOOR_C[s], d=st.tables[id], seated=d !== undefined;
+    const d=st.tables[id], seated=d !== undefined;
+    // Use coverage server color if table was assigned to a different server during break
+    const colorSec = (seated && d.coverageSec) ? d.coverageSec : s;
+    const c=FLOOR_C[colorSec];
     // Use moved position if set, otherwise original
     const rpos = st.movedPos[id] ? {...pos, l:st.movedPos[id].l, t:st.movedPos[id].t} : pos;
 
@@ -732,6 +800,18 @@ function renderFloor(){
 function mkZone(f,l,t,w,h,bg){const e=document.createElement('div');e.className='bg-zone';e.style.cssText=`left:${l}%;top:${t}%;width:${w}%;height:${h}%;background:${bg};`;f.appendChild(e);}
 function mkLbl(f,l,t,w,txt,fs,vert){const e=document.createElement('div');e.className='zone-lbl';e.style.cssText=`left:${l}%;top:${t}%;width:${w}%;font-size:${fs}px;`+(vert?'writing-mode:vertical-rl;letter-spacing:2px;':'letter-spacing:2px;');e.textContent=txt;f.appendChild(e);}
 
+// ── IN-APP CONFIRM (replaces window.confirm which Safari blocks in standalone mode)
+function showConfirm(msg, onYes){
+  const overlay = document.getElementById('confirm-overlay');
+  document.getElementById('confirm-msg').textContent = msg;
+  overlay.classList.add('open');
+  const yes = document.getElementById('confirm-yes');
+  const no  = document.getElementById('confirm-no');
+  function cleanup(){ overlay.classList.remove('open'); yes.replaceWith(yes.cloneNode(true)); no.replaceWith(no.cloneNode(true)); }
+  document.getElementById('confirm-yes').addEventListener('click', ()=>{ cleanup(); onYes(); }, {once:true});
+  document.getElementById('confirm-no').addEventListener('click',  ()=>{ cleanup(); },         {once:true});
+}
+
 let _capturedEl = null, _capturedPid = null;
 
 function releaseAnyCapture(){
@@ -770,8 +850,10 @@ function snapDrop(dragId, dropL, dropT){
   const dragPos = T[dragId]; if(!dragPos) return {l:dropL,t:dropT,linkId:null};
   const SNAP = 14; let best=null, bestDist=Infinity;
   const dragCX = dropL+dragPos.w/2, dragCY = dropT+dragPos.h/2;
+  const BOOTH_SHAPES = new Set(['booth','booth-h','booth-top2','booth-top1','booth-bot2','corner-booth','corner-booth-ccw']);
   for(const [idStr,pos] of Object.entries(T)){
     const tid=+idStr; if(tid===dragId) continue;
+    if(BOOTH_SHAPES.has(pos.s)) continue; // booths cannot be linked to
     const tl = st.movedPos[tid]?.l??pos.l, tt = st.movedPos[tid]?.t??pos.t;
     const cx=tl+pos.w/2, cy=tt+pos.h/2;
     const dist=Math.hypot(cx-dragCX,cy-dragCY);
@@ -779,14 +861,10 @@ function snapDrop(dragId, dropL, dropT){
   }
   if(!best) return {l:dropL,t:dropT,linkId:null};
   const dx=dragCX-best.l-best.w/2, dy=dragCY-best.t-best.h/2;
-  let sl,st2;
-  if(Math.abs(dx)>Math.abs(dy)){
-    sl = dx>0 ? best.l+best.w+0.3 : best.l-dragPos.w-0.3;
-    st2= best.t+(best.h-dragPos.h)/2;
-  } else {
-    sl = best.l+(best.w-dragPos.w)/2;
-    st2= dy>0 ? best.t+best.h+0.3 : best.t-dragPos.h-0.3;
-  }
+  // Only snap horizontally (left/right), not vertically
+  if(Math.abs(dx) <= Math.abs(dy)) return {l:dropL,t:dropT,linkId:null};
+  const sl = dx>0 ? best.l+best.w+0.3 : best.l-dragPos.w-0.3;
+  const st2 = best.t+(best.h-dragPos.h)/2;
   return {l:sl,t:st2,linkId:best.id};
 }
 
@@ -802,15 +880,24 @@ function addTableEvents(el, id, onTap){
   const isDraggable = draggable || hOnly;
 
   if(!isDraggable){
-    el.addEventListener('pointerdown', e=>{ el.classList.add('pressing'); });
-    el.addEventListener('pointerup',   e=>{ el.classList.remove('pressing'); });
-    el.addEventListener('pointerleave',e=>{ el.classList.remove('pressing'); });
-    el.addEventListener('click', ()=>{
+    let _tapPid = null;
+    el.addEventListener('pointerdown', e=>{
+      if(document.getElementById('overlay').classList.contains('open')) return;
+      if(st._modalCooldown) return;
+      _tapPid = e.pointerId;
+      el.setPointerCapture(e.pointerId);
+      el.classList.add('pressing');
+    });
+    el.addEventListener('pointerup', e=>{
+      el.classList.remove('pressing');
+      if(e.pointerId !== _tapPid) return;
+      _tapPid = null;
       if(document.getElementById('overlay').classList.contains('open')) return;
       if(st._modalCooldown) return;
       onTap();
     });
-    el.addEventListener('contextmenu',e=>e.preventDefault());
+    el.addEventListener('pointercancel', e=>{ el.classList.remove('pressing'); _tapPid = null; });
+    el.addEventListener('contextmenu', e=>e.preventDefault());
     return;
   }
 
@@ -973,6 +1060,73 @@ function openRotModal(){
   document.getElementById('overlay').classList.add('open');
 }
 
+// ── BREAK REASSIGNMENT MODAL
+function openBreakReassignModal(id, group, breakSec){
+  st.mTable = id;
+  st.mGroup = group;
+  const bc = FLOOR_C[breakSec];
+  const title = group.size > 1 ? `Tables ${[...group].sort((a,b)=>a-b).join('+')}` : `Table ${id}`;
+
+  document.getElementById('m-title').textContent = title;
+  document.getElementById('m-title').style.color = bc.bg;
+  const badge = document.getElementById('m-badge');
+  badge.textContent = `§${breakSec}`;
+  badge.style.cssText = `background:${bc.bg};color:${bc.tx};font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;`;
+  document.getElementById('m-srv').textContent = `☕ ${st.names[breakSec]||`Server ${breakSec}`} is on break`;
+  document.getElementById('m-timer').style.display = 'none';
+  document.querySelectorAll('.pb').forEach(b=>b.classList.remove('on'));
+
+  // Build server picker
+  const pgrid = document.querySelector('.pgrid');
+  pgrid.style.display = 'none';
+  document.querySelector('.m-lbl').textContent = 'Assign to:';
+
+  const picker = document.createElement('div');
+  picker.id = 'break-picker';
+  picker.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:15px;';
+
+  const activeSecs = Array.from({length:st.servers},(_,i)=>i+1).filter(s=>s!==breakSec && !st.onBreak.has(s));
+  for(const s of activeSecs){
+    const c2 = FLOOR_C[s];
+    const btn = document.createElement('button');
+    btn.style.cssText = `padding:8px 4px;border-radius:8px;border:1.5px solid ${c2.bg};background:rgba(0,0,0,0.2);
+      color:${c2.bg};font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;`;
+    btn.textContent = st.names[s]||`Server ${s}`;
+    btn.addEventListener('click', ()=>{
+      // Restore party grid, remove picker
+      pgrid.style.display = '';
+      document.querySelector('.m-lbl').textContent = 'Party Size';
+      picker.remove();
+      st.mOverrideSec = s;
+      // Update modal header to show substitute server
+      const badge2 = document.getElementById('m-badge');
+      badge2.textContent = `§${s}`;
+      badge2.style.cssText = `background:${c2.bg};color:${c2.tx};font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;`;
+      document.getElementById('m-title').style.color = c2.bg;
+      document.getElementById('m-srv').textContent = `${st.names[s]||`Server ${s}`} (covering for ${st.names[breakSec]||`Server ${breakSec}`})`;
+      const btns = document.getElementById('mbtns');
+      btns.innerHTML = `<button class="mbtn-p" id="mb-go" style="background:${c2.bg};color:${c2.tx}" disabled>Seat</button>
+        <button class="mbtn-g" id="mb-cx">Cancel</button>`;
+      document.getElementById('mb-go').addEventListener('click', doSeat);
+      document.getElementById('mb-cx').addEventListener('click', ()=>{ pgrid.style.display=''; document.querySelector('.m-lbl').textContent='Party Size'; closeModal(); });
+    });
+    picker.appendChild(btn);
+  }
+
+  // Insert picker after m-lbl
+  const mlbl = document.querySelector('.m-lbl');
+  mlbl.parentNode.insertBefore(picker, pgrid);
+
+  document.getElementById('mbtns').innerHTML = `<button class="mbtn-g" id="mb-cx">Cancel</button>`;
+  document.getElementById('mb-cx').addEventListener('click', ()=>{
+    pgrid.style.display='';
+    document.querySelector('.m-lbl').textContent='Party Size';
+    const pp = document.getElementById('break-picker'); if(pp) pp.remove();
+    closeModal();
+  });
+  document.getElementById('overlay').classList.add('open');
+}
+
 // ── SEAT MODAL
 function openModal(id){
   const group = getLinkedGroup(id);
@@ -1004,8 +1158,15 @@ function openModal(id){
 
   // Single-section or already-seated group — existing flow
   st.mMultiSec = null;
+  st.mOverrideSec = null;
   const s = secOf(id), c = FLOOR_C[s];
   const anySeated = [...group].some(gid => st.tables[gid] !== undefined);
+
+  // If server is on break and table not yet seated, prompt for reassignment
+  if(st.onBreak.has(s) && !anySeated){
+    openBreakReassignModal(id, group, s);
+    return;
+  }
   const existingParty = [...group].map(gid => st.tables[gid]?.party).find(p => p !== undefined) ?? null;
   st.mParty = existingParty;
 
@@ -1119,10 +1280,14 @@ function clearAllPressing(){
 function closeModal(){
   clearInterval(st._timerInterval);
   document.getElementById('overlay').classList.remove('open');
-  st.mTable=null; st.mParty=null; st.mGroup=null; st.mMultiSec=null; st.mMultiStep=0; st.rotMode=false;
+  st.mTable=null; st.mParty=null; st.mGroup=null; st.mMultiSec=null; st.mMultiStep=0; st.mOverrideSec=null; st.rotMode=false;
   releaseAnyCapture();
   clearAllPressing();
   if(document.activeElement) document.activeElement.blur();
+  // Clean up break picker if present
+  const bp = document.getElementById('break-picker'); if(bp) bp.remove();
+  const pg = document.querySelector('.pgrid'); if(pg) pg.style.display='';
+  const ml = document.querySelector('.m-lbl'); if(ml) ml.textContent='Party Size';
   st._modalCooldown = true;
   setTimeout(()=>{ st._modalCooldown = false; }, 300);
   renderFloor();
@@ -1142,9 +1307,9 @@ function doSeat(){
     const prevParty = [...group].map(gid=>st.tables[gid]?.party).find(p=>p!==undefined)??null;
     // Set all members to same party
     const prevSeatedAt = [...group].map(g=>st.tables[g]?.seatedAt).find(t=>t) || Date.now();
-    for(const gid of ids) st.tables[gid] = {party: st.mParty, seatedAt: prevParty ? prevSeatedAt : Date.now()};
+    for(const gid of ids) st.tables[gid] = {party: st.mParty, seatedAt: prevParty ? prevSeatedAt : Date.now(), ...(st.mOverrideSec ? {coverageSec: st.mOverrideSec} : {})};
     // Log rotation once — skip if "In Use" (party === 0)
-    const s = secOf(primary);
+    const s = st.mOverrideSec || secOf(primary);
     if(s && st.mParty !== 0 && !prevParty){
       const type = st.mParty===1 ? 'S' : st.mParty>=5 ? 'XL' : 'X';
       addEventToSec(s, type, st.mParty);
@@ -1223,8 +1388,9 @@ document.querySelectorAll('.pb').forEach(b=>{
 document.getElementById('act-seat').addEventListener('click', openRotModal);
 document.getElementById('act-d').addEventListener('click', ()=>{ addEvent('D', 1); });
 
-document.getElementById('sct-sel').addEventListener('change', e=>{
-  const newCount = +e.target.value;
+function applyServerCount(newCount){
+  newCount = Math.max(2, Math.min(11, newCount));
+  if(newCount === st.servers) return;
   const oldCount = st.servers;
 
   if(newCount < oldCount){
@@ -1232,6 +1398,7 @@ document.getElementById('sct-sel').addEventListener('change', e=>{
       delete st.events[s];
       delete st.guestTotals[s];
       st.newServers.delete(s);
+      st.onBreak.delete(s);
     }
     for(const [tid] of Object.entries(st.tables)){
       let found = false;
@@ -1241,7 +1408,6 @@ document.getElementById('sct-sel').addEventListener('change', e=>{
       if(!found) delete st.tables[tid];
     }
     if(st.selectedSec > newCount) st.selectedSec = null;
-
   } else if(newCount > oldCount){
     let totalGuests = 0;
     for(let s=1; s<=oldCount; s++) totalGuests += secGuestScore(s);
@@ -1255,16 +1421,28 @@ document.getElementById('sct-sel').addEventListener('change', e=>{
 
   st.servers = newCount;
   st.selectedSec = null;
+  document.getElementById('srv-count').textContent = newCount;
   clearUnassignedStools();
   renderAll();
-});
+}
+
+document.getElementById('srv-dec').addEventListener('click', ()=> applyServerCount(st.servers - 1));
+document.getElementById('srv-inc').addEventListener('click', ()=> applyServerCount(st.servers + 1));
 let clrArmed = false, clrTimer = null;
+document.getElementById('btn-reset-pos').addEventListener('click', ()=>{
+  showConfirm('Reset all table positions?', ()=>{
+    st.movedPos = {};
+    st.links = {};
+    renderAll();
+  });
+});
+
 document.getElementById('btn-clr').addEventListener('click',()=>{
   if(clrArmed){
     clearTimeout(clrTimer);
     clrArmed = false;
     document.getElementById('btn-clr').textContent = '✕ Clear All';
-    st.tables={}; st.events={}; st.movedPos={}; st.links={}; st.guestTotals={}; st.dailyTables=0; st.dailyGuests=0; st.newServers=new Set(); st.selectedSec=null; st.mGroup=null;
+    st.tables={}; st.events={}; st.movedPos={}; st.links={}; st.guestTotals={}; st.dailyTables=0; st.dailyGuests=0; st.newServers=new Set(); st.onBreak=new Set(); st.selectedSec=null; st.mGroup=null;
     localStorage.removeItem(LS_KEY);
     closeModal();
     renderAll();
@@ -1299,8 +1477,8 @@ function renderBanner(){
   const banner = document.getElementById('next-banner');
   const upcoming = document.getElementById('next-banner-upcoming');
 
-  // Find next 3 in rotation order (first = next up, 2nd & 3rd shown as dots)
-  const secs = Array.from({length:st.servers},(_,i)=>i+1);
+  // Find next 3 in rotation order, excluding on-break servers
+  const secs = Array.from({length:st.servers},(_,i)=>i+1).filter(s=>!st.onBreak.has(s));
   const sorted = [...secs].sort((a,b)=>secGuestScore(a)-secGuestScore(b));
   // Respect new-server priority
   const newArr = sorted.filter(s=>st.newServers.has(s));
@@ -1353,6 +1531,7 @@ function renderAll(){
 }
 
 // ── LOCAL PERSISTENCE (instant restore on load, Firebase syncs on top)
+document.getElementById('overlay').classList.remove('open');
 
 function saveLocal(){
   try{
@@ -1360,7 +1539,7 @@ function saveLocal(){
       servers: st.servers, names: st.names, tables: st.tables,
       movedPos: st.movedPos, guestTotals: st.guestTotals,
       dailyTables: st.dailyTables, dailyGuests: st.dailyGuests,
-      newServers: [...st.newServers], selectedSec: st.selectedSec,
+      newServers: [...st.newServers], onBreak: [...st.onBreak], selectedSec: st.selectedSec,
       links: Object.fromEntries(Object.entries(st.links).map(([k,v])=>[k,[...v]]))
     };
     localStorage.setItem(LS_KEY, JSON.stringify(data));
@@ -1380,11 +1559,12 @@ function loadLocal(){
     st.dailyTables = data.dailyTables ?? 0;
     st.dailyGuests = data.dailyGuests ?? 0;
     st.newServers  = new Set(data.newServers ?? []);
+    st.onBreak     = new Set(data.onBreak    ?? []);
     st.selectedSec = data.selectedSec ?? null;
     st.links = {};
     for(const [k,v] of Object.entries(data.links ?? {}))
       st.links[+k] = new Set(v);
-    document.getElementById('sct-sel').value = st.servers;
+    document.getElementById('srv-count').textContent = st.servers;
   } catch(e){}
 }
 
@@ -1407,6 +1587,7 @@ function stateToDB(){
     dailyTables: st.dailyTables,
     dailyGuests: st.dailyGuests,
     newServers:  [...st.newServers],
+    onBreak:     [...st.onBreak],
     selectedSec: st.selectedSec ?? null
   };
 }
@@ -1424,11 +1605,12 @@ function dbToState(data){
     st.dailyTables = data.dailyTables ?? 0;
     st.dailyGuests = data.dailyGuests ?? 0;
     st.newServers  = new Set(data.newServers ?? []);
+    st.onBreak     = new Set(data.onBreak    ?? []);
     st.selectedSec = data.selectedSec ?? null;
     st.links = {};
     for(const [k,v] of Object.entries(data.links ?? {}))
       st.links[+k] = new Set(v);
-    document.getElementById('sct-sel').value = st.servers;
+    document.getElementById('srv-count').textContent = st.servers;
     _fbSyncing = false;
     saveLocal();
     renderOnly();
