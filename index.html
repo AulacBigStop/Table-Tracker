@@ -23,7 +23,7 @@ html,body{height:100%;overflow:hidden;font-family:'IBM Plex Mono','Courier New',
 body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-select:none;user-select:none;}
 
 /* HEADER */
-#hdr{height:48px;min-height:48px;flex-shrink:0;background:var(--surf);border-bottom:1px solid var(--border);
+#hdr{height:72px;min-height:72px;flex-shrink:0;background:var(--surf);border-bottom:1px solid var(--border);
   display:flex;align-items:center;padding:0 12px;gap:10px;}
 #logo{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);letter-spacing:1px;white-space:nowrap;}
 .vdiv{width:1px;height:20px;background:var(--border);}
@@ -1163,7 +1163,7 @@ function openStoolModal(id, sec){
   const btns = document.getElementById('mbtns');
   if(seated){
     btns.innerHTML=`<button class="mbtn-p" id="mb-go" style="background:${c.bg};color:${c.tx}">Update</button>
-      <button class="mbtn-d" id="mb-cl">Clear</button><button class="mbtn-g" id="mb-cx">✕</button>`;
+      <button class="mbtn-d" id="mb-cl">Clean</button><button class="mbtn-g" id="mb-cx">✕</button>`;
   } else {
     btns.innerHTML=`<button class="mbtn-p" id="mb-go" style="background:${c.bg};color:${c.tx}" disabled>Seat</button>
       <button class="mbtn-g" id="mb-cx">Cancel</button>`;
@@ -1317,7 +1317,7 @@ function openModal(id){
   const hasMoved = [...group].some(gid => st.movedPos[gid]);
   if(anySeated){
     btns.innerHTML=`<button class="mbtn-p" id="mb-go" style="background:${c.bg};color:${c.tx}">Update</button>
-      <button class="mbtn-d" id="mb-cl">Clear</button>
+      <button class="mbtn-d" id="mb-cl">Clean</button>
       ${hasMoved?`<button class="mbtn-g" id="mb-ret" style="font-size:11px;">↩</button>`:''}
       <button class="mbtn-g" id="mb-cx">✕</button>`;
   } else {
