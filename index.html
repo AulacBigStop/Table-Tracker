@@ -428,6 +428,8 @@ function snapshotState(){
   if(UNDO_STACK.length > UNDO_MAX) UNDO_STACK.shift();
   REDO_STACK.length = 0;
   updateUndoBtn();
+  pushToFirebase();
+  saveLocal();
 }
 function applySnap(snap){
   deserializeState(JSON.parse(snap));
@@ -1683,8 +1685,7 @@ function renderOnly(){
 }
 function renderAll(){
   renderOnly();
-  pushToFirebase();
-  saveLocal();
+  snapshotState();
 }
 
 // ── LOGIN SCREEN
@@ -1740,8 +1741,7 @@ function loadLocal(){
 
 // Restore from localStorage instantly, then Firebase will sync on top
 loadLocal();
-renderAll();
-snapshotState(); // seed the undo stack with the initial state
+renderAll(); // seeds undo stack via snapshotState inside renderAll
 
 
 // ── FIREBASE SYNC (REST API — no SDK required) ──────────────
@@ -1797,8 +1797,10 @@ async function poll(){
       setSyncDot(true);
       const asStr = JSON.stringify(data);
       if(asStr !== _lastPollData){
-        _lastPollData = asStr;
-        if(!_fbSyncing) dbToState(data);
+        if(!_fbSyncing){
+          _lastPollData = asStr;
+          dbToState(data);
+        }
       }
       _fbReady = true; // allow writes only after first successful read
     } else {
