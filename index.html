@@ -1685,6 +1685,8 @@ function renderOnly(){
 }
 function renderAll(){
   renderOnly();
+  pushToFirebase();
+  saveLocal();
   snapshotState();
 }
 
