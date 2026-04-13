@@ -77,7 +77,7 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
 .st strong{color:var(--text);}
 
 /* NEXT-UP BANNER */
-#next-banner{flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:12px;
+#next-banner{flex-shrink:0;display:flex;will-change:background;align-items:center;justify-content:center;gap:12px;
   padding:10px 16px;border-top:2px solid rgba(255,255,255,0.06);
   background:var(--surf);}
 #next-banner-label{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;
@@ -183,6 +183,15 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
 .mbtn-d:active{background:rgba(255,80,80,0.22);}
 .mbtn-g{padding:12px;border-radius:9px;border:1px solid var(--border);background:transparent;
   color:var(--dim);font-family:'IBM Plex Sans',sans-serif;font-size:14px;cursor:pointer;}
+
+/* iOS tap delay fix */
+button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
+#btn-undo, #btn-redo, #btn-reset-pos, #btn-logout, #btn-clr,
+#confirm-yes, #confirm-no, #pwd-confirm, #pwd-cancel, #login-btn {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
 </style>
 </head>
 <body>
@@ -196,6 +205,11 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
       style="width:100%;padding:16px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);
       color:#fff;font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:700;text-align:center;letter-spacing:8px;outline:none;">
     <div id="login-error" style="color:#ff6060;font-size:12px;font-family:'IBM Plex Mono',monospace;min-height:16px;"></div>
+    <button id="guide-open-btn"
+      style="width:100%;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.6);
+      font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:1px;touch-action:manipulation;">
+      📖 VIEW STAFF GUIDE
+    </button>
     <button id="login-btn"
       style="width:100%;padding:16px;border-radius:10px;border:none;background:#FFD700;color:#000;
       font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:1px;">
@@ -553,7 +567,7 @@ function renderRot(){
     const row = document.createElement('div');
     row.className = 'sec-row' + (isNext?' next-up':'') + (isSel?' selected':'') + (isOnBreak?' on-break':'');
     rowEls[s] = row;
-    row.addEventListener('click', e => { if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON') return; selectSec(s); });
+    row.addEventListener('pointerup', e => { if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON') return; if(st._modalCooldown) return; selectSec(s); });
 
     // Top line: badge + name
     const rowTop = document.createElement('div');
@@ -586,7 +600,7 @@ function renderRot(){
     const btnMinus = document.createElement('button');
     btnMinus.textContent = '−';
     btnMinus.className = 'sec-adj-btn';
-    btnMinus.addEventListener('click', ev => { ev.stopPropagation(); st.guestTotals[s]=Math.max(0,(st.guestTotals[s]||0)-1); snapshotState(); renderRot(); });
+    btnMinus.addEventListener('pointerup', ev => { ev.stopPropagation(); st.guestTotals[s]=Math.max(0,(st.guestTotals[s]||0)-1); snapshotState(); renderRot(); });
 
     const scoreEl = document.createElement('div');
     scoreEl.className = 'sec-score';
@@ -596,7 +610,7 @@ function renderRot(){
     const btnPlus = document.createElement('button');
     btnPlus.textContent = '+';
     btnPlus.className = 'sec-adj-btn';
-    btnPlus.addEventListener('click', ev => { ev.stopPropagation(); st.guestTotals[s]=(st.guestTotals[s]||0)+1; snapshotState(); renderRot(); });
+    btnPlus.addEventListener('pointerup', ev => { ev.stopPropagation(); st.guestTotals[s]=(st.guestTotals[s]||0)+1; snapshotState(); renderRot(); });
 
     rowBot.appendChild(btnMinus);
     rowBot.appendChild(scoreEl);
@@ -606,7 +620,7 @@ function renderRot(){
     btnBreak.textContent = '☕';
     btnBreak.className = 'break-btn' + (isOnBreak ? ' active' : '');
     btnBreak.title = isOnBreak ? 'End break' : 'Mark on break';
-    btnBreak.addEventListener('click', ev => {
+    btnBreak.addEventListener('pointerup', ev => {
       ev.stopPropagation();
       const name = st.names[s] || `Server ${s}`;
       const isBreak = st.onBreak.has(s);
@@ -920,8 +934,8 @@ function showConfirm(msg, onYes){
   const yes = document.getElementById('confirm-yes');
   const no  = document.getElementById('confirm-no');
   function cleanup(){ overlay.classList.remove('open'); yes.replaceWith(yes.cloneNode(true)); no.replaceWith(no.cloneNode(true)); }
-  document.getElementById('confirm-yes').addEventListener('click', ()=>{ cleanup(); onYes(); }, {once:true});
-  document.getElementById('confirm-no').addEventListener('click',  ()=>{ cleanup(); },         {once:true});
+  document.getElementById('confirm-yes').addEventListener('pointerup', ()=>{ cleanup(); onYes(); }, {once:true});
+  document.getElementById('confirm-no').addEventListener('pointerup',  ()=>{ cleanup(); },         {once:true});
 }
 
 let _capturedEl = null, _capturedPid = null;
@@ -1152,9 +1166,9 @@ function openStoolModal(id, sec){
     btns.innerHTML=`<button class="mbtn-p" id="mb-go" style="background:${c.bg};color:${c.tx}" disabled>Seat</button>
       <button class="mbtn-g" id="mb-cx">Cancel</button>`;
   }
-  document.getElementById('mb-go').addEventListener('click', doSeat);
-  document.getElementById('mb-cx').addEventListener('click', closeModal);
-  const clr=document.getElementById('mb-cl'); if(clr) clr.addEventListener('click', doClear);
+  document.getElementById('mb-go').addEventListener('pointerup', doSeat);
+  document.getElementById('mb-cx').addEventListener('pointerup', closeModal);
+  const clr=document.getElementById('mb-cl'); if(clr) clr.addEventListener('pointerup', doClear);
   document.getElementById('overlay').classList.add('open');
 }
 
@@ -1175,7 +1189,7 @@ function openRotModal(){
   document.querySelectorAll('.pb').forEach(b=>b.classList.remove('on'));
   document.getElementById('mbtns').innerHTML =
     `<button class="mbtn-g" id="mb-cx" style="flex:1;">Cancel</button>`;
-  document.getElementById('mb-cx').addEventListener('click', closeModal);
+  document.getElementById('mb-cx').addEventListener('pointerup', closeModal);
   document.getElementById('overlay').classList.add('open');
 }
 
@@ -1211,7 +1225,7 @@ function openBreakReassignModal(id, group, breakSec){
     btn.style.cssText = `padding:8px 4px;border-radius:8px;border:1.5px solid ${c2.bg};background:rgba(0,0,0,0.2);
       color:${c2.bg};font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;`;
     btn.textContent = st.names[s]||`Server ${s}`;
-    btn.addEventListener('click', ()=>{
+    btn.addEventListener('pointerup', ()=>{
       // Restore party grid, remove picker
       pgrid.style.display = '';
       document.querySelector('.m-lbl').textContent = 'Party Size';
@@ -1226,8 +1240,8 @@ function openBreakReassignModal(id, group, breakSec){
       const btns = document.getElementById('mbtns');
       btns.innerHTML = `<button class="mbtn-p" id="mb-go" style="background:${c2.bg};color:${c2.tx}" disabled>Seat</button>
         <button class="mbtn-g" id="mb-cx">Cancel</button>`;
-      document.getElementById('mb-go').addEventListener('click', doSeat);
-      document.getElementById('mb-cx').addEventListener('click', ()=>{ pgrid.style.display=''; document.querySelector('.m-lbl').textContent='Party Size'; closeModal(); });
+      document.getElementById('mb-go').addEventListener('pointerup', doSeat);
+      document.getElementById('mb-cx').addEventListener('pointerup', ()=>{ pgrid.style.display=''; document.querySelector('.m-lbl').textContent='Party Size'; closeModal(); });
     });
     picker.appendChild(btn);
   }
@@ -1237,7 +1251,7 @@ function openBreakReassignModal(id, group, breakSec){
   mlbl.parentNode.insertBefore(picker, pgrid);
 
   document.getElementById('mbtns').innerHTML = `<button class="mbtn-g" id="mb-cx">Cancel</button>`;
-  document.getElementById('mb-cx').addEventListener('click', ()=>{
+  document.getElementById('mb-cx').addEventListener('pointerup', ()=>{
     pgrid.style.display='';
     document.querySelector('.m-lbl').textContent='Party Size';
     const pp = document.getElementById('break-picker'); if(pp) pp.remove();
@@ -1309,11 +1323,11 @@ function openModal(id){
       ${hasMoved?`<button class="mbtn-g" id="mb-ret" style="font-size:11px;">↩ Reset Position</button>`:''}
       <button class="mbtn-g" id="mb-cx">Cancel</button>`;
   }
-  document.getElementById('mb-go').addEventListener('click', doSeat);
-  document.getElementById('mb-cx').addEventListener('click', closeModal);
-  const clr=document.getElementById('mb-cl'); if(clr) clr.addEventListener('click', doClear);
+  document.getElementById('mb-go').addEventListener('pointerup', doSeat);
+  document.getElementById('mb-cx').addEventListener('pointerup', closeModal);
+  const clr=document.getElementById('mb-cl'); if(clr) clr.addEventListener('pointerup', doClear);
   const ret=document.getElementById('mb-ret');
-  if(ret) ret.addEventListener('click', ()=>{
+  if(ret) ret.addEventListener('pointerup', ()=>{
     for(const gid of group){ delete st.movedPos[gid]; unlinkTable(gid); }
     closeModal(); renderFloor(); renderStatus();
   });
@@ -1362,12 +1376,12 @@ function openModalStep(){
 
   // No Next button — auto-advances on party size tap
   if(hasMoved){
-    document.getElementById('mb-ret').addEventListener('click', ()=>{
+    document.getElementById('mb-ret').addEventListener('pointerup', ()=>{
       for(const gid of st.mGroup){ delete st.movedPos[gid]; unlinkTable(gid); }
       closeModal(); renderFloor(); renderStatus();
     });
   }
-  document.getElementById('mb-cx').addEventListener('click', closeModal);
+  document.getElementById('mb-cx').addEventListener('pointerup', closeModal);
 
   document.getElementById('overlay').classList.add('open');
 }
@@ -1455,7 +1469,7 @@ function doClear(){
 }
 
 document.querySelectorAll('.pb').forEach(b=>{
-  b.addEventListener('click',()=>{
+  b.addEventListener('pointerup',()=>{
     st.mParty = b.dataset.n === '' ? null : +b.dataset.n;
     document.querySelectorAll('.pb').forEach(x=>x.classList.toggle('on', +x.dataset.n===st.mParty && st.mParty!==null));
 
@@ -1506,8 +1520,8 @@ document.querySelectorAll('.pb').forEach(b=>{
   });
 });
 
-document.getElementById('act-seat').addEventListener('click', openRotModal);
-document.getElementById('act-d').addEventListener('click', ()=>{ addEvent('D', 1); });
+document.getElementById('act-seat').addEventListener('pointerup', openRotModal);
+document.getElementById('act-d').addEventListener('pointerup', ()=>{ addEvent('D', 1); });
 
 function applyServerCount(newCount){
   newCount = Math.max(2, Math.min(11, newCount));
@@ -1547,12 +1561,12 @@ function applyServerCount(newCount){
   renderAll();
 }
 
-document.getElementById('srv-dec').addEventListener('click', ()=> applyServerCount(st.servers - 1));
-document.getElementById('srv-inc').addEventListener('click', ()=> applyServerCount(st.servers + 1));
-document.getElementById('btn-undo').addEventListener('click', ()=>{ undoState(); });
-document.getElementById('btn-redo').addEventListener('click', ()=>{ redoState(); });
+document.getElementById('srv-dec').addEventListener('pointerup', e=>{ e.preventDefault(); applyServerCount(st.servers - 1); });
+document.getElementById('srv-inc').addEventListener('pointerup', e=>{ e.preventDefault(); applyServerCount(st.servers + 1); });
+document.getElementById('btn-undo').addEventListener('pointerup', ()=>{ undoState(); });
+document.getElementById('btn-redo').addEventListener('pointerup', ()=>{ redoState(); });
 
-document.getElementById('btn-logout').addEventListener('click', ()=>{
+document.getElementById('btn-logout').addEventListener('pointerup', ()=>{
   showConfirm('Log out?', ()=>{
     sessionStorage.removeItem('tt_auth_v1');
     document.getElementById('login-screen').style.display = 'flex';
@@ -1560,7 +1574,7 @@ document.getElementById('btn-logout').addEventListener('click', ()=>{
   });
 });
 
-document.getElementById('btn-reset-pos').addEventListener('click', ()=>{
+document.getElementById('btn-reset-pos').addEventListener('pointerup', ()=>{
   showConfirm('Reset all table positions?', ()=>{
     st.movedPos = {};
     st.links = {};
@@ -1568,7 +1582,7 @@ document.getElementById('btn-reset-pos').addEventListener('click', ()=>{
   });
 });
 
-document.getElementById('btn-clr').addEventListener('click',()=>{
+document.getElementById('btn-clr').addEventListener('pointerup',()=>{
   const pwdOverlay = document.getElementById('pwd-overlay');
   const pwdInput   = document.getElementById('pwd-input');
   const pwdError   = document.getElementById('pwd-error');
@@ -1577,10 +1591,10 @@ document.getElementById('btn-clr').addEventListener('click',()=>{
   pwdOverlay.style.display = 'flex';
   setTimeout(()=>pwdInput.focus(), 100);
 
-  document.getElementById('pwd-cancel').onclick = ()=>{
+  document.getElementById('pwd-cancel').onpointerup = ()=>{
     pwdOverlay.style.display = 'none';
   };
-  document.getElementById('pwd-confirm').onclick = ()=>{
+  document.getElementById('pwd-confirm').onpointerup = ()=>{
     if(pwdInput.value === '2047'){
       pwdOverlay.style.display = 'none';
       st.tables={}; st.events={}; st.movedPos={}; st.links={}; st.guestTotals={};
@@ -1596,9 +1610,9 @@ document.getElementById('btn-clr').addEventListener('click',()=>{
     }
   };
   // Also submit on Enter
-  pwdInput.onkeydown = e=>{ if(e.key==='Enter') document.getElementById('pwd-confirm').click(); };
+  pwdInput.onkeydown = e=>{ if(e.key==='Enter') document.getElementById('pwd-confirm').dispatchEvent(new Event('pointerup')); };
 });
-document.getElementById('overlay').addEventListener('click', e=>{
+document.getElementById('overlay').addEventListener('pointerup', e=>{
   if(e.target===document.getElementById('overlay')) closeModal();
 });
 // Debounced resize — avoids layout thrash on iPad orientation change
@@ -1705,7 +1719,7 @@ function renderAll(){
     setTimeout(()=>input.focus(), 300);
   }
 
-  btn.addEventListener('click', tryLogin);
+  btn.addEventListener('pointerup', tryLogin);
   input.addEventListener('keydown', e=>{ if(e.key==='Enter') tryLogin(); });
 })();
 
@@ -1796,6 +1810,621 @@ async function poll(){
   setTimeout(poll, 2000);
 }
 poll();
+</script>
+
+<!-- STAFF GUIDE OVERLAY -->
+<style>
+#guide-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #0e0e11;
+  z-index: 10000;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+#guide-overlay.open { display: block; }
+#guide-close {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  background: #0e0e11;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 1;
+  box-sizing: border-box;
+}
+#guide-close-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+  color: #eee;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#guide-close-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #FFD700;
+  letter-spacing: 1px;
+}
+.guide-overlay {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+}
+:root {
+
+  --bg: #0e0e11;
+  --surf: #16161a;
+  --surf2: #1e1e24;
+  --border: rgba(255,255,255,0.08);
+  --text: #eee;
+  --dim: rgba(255,255,255,0.45);
+  --accent: #FFD700;
+  --green: #3FBD5A;
+  --red: #E84040;
+  --orange: #FFA500;
+}
+.guide-overlay * {
+ box-sizing: border-box; margin: 0; padding: 0; }
+.guide-overlay body {
+
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  padding: 32px 20px 60px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.guide-overlay /* HEADER */
+.guide-header {
+
+  text-align: center;
+  margin-bottom: 48px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--border);
+}
+.guide-overlay .guide-title {
+
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+.guide-overlay .guide-header h1 {
+
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: clamp(22px, 5vw, 34px);
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+  margin-bottom: 10px;
+}
+.guide-overlay .guide-header p {
+
+  color: var(--dim);
+  font-size: 14px;
+}
+.guide-overlay /* SECTION */
+.section {
+
+  margin-bottom: 40px;
+}
+.guide-overlay .section-label {
+
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.guide-overlay .section-label::after {
+
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.guide-overlay .section h2 {
+
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 12px;
+}
+.guide-overlay /* STEPS */
+.steps {
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.guide-overlay .step {
+
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  background: var(--surf);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.guide-overlay .step-num {
+
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(255,215,0,0.1);
+  border: 1px solid rgba(255,215,0,0.2);
+  border-radius: 8px;
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.guide-overlay .step-body strong {
+
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.guide-overlay .step-body p {
+
+  color: var(--dim);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.guide-overlay /* CALLOUT */
+.callout {
+
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin: 16px 0;
+  font-size: 14px;
+  line-height: 1.5;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.guide-overlay .callout.tip {
+
+  background: rgba(255,215,0,0.07);
+  border: 1px solid rgba(255,215,0,0.2);
+  color: rgba(255,215,0,0.9);
+}
+.guide-overlay .callout.info {
+
+  background: rgba(100,160,255,0.07);
+  border: 1px solid rgba(100,160,255,0.2);
+  color: rgba(150,190,255,0.9);
+}
+.guide-overlay .callout.warning {
+
+  background: rgba(255,100,100,0.07);
+  border: 1px solid rgba(255,100,100,0.2);
+  color: rgba(255,140,140,0.9);
+}
+.guide-overlay .callout-icon {
+
+  font-size: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.guide-overlay /* PILL / BADGE */
+.pill {
+
+  display: inline-block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  vertical-align: middle;
+  margin: 0 2px;
+}
+.guide-overlay .pill.gold {
+ background: rgba(255,215,0,0.15); color: var(--accent); border: 1px solid rgba(255,215,0,0.3); }
+.guide-overlay .pill.red {
+ background: rgba(232,64,64,0.15); color: #ff8080; border: 1px solid rgba(232,64,64,0.3); }
+.guide-overlay .pill.green {
+ background: rgba(63,189,90,0.15); color: #6fdc8c; border: 1px solid rgba(63,189,90,0.3); }
+.guide-overlay .pill.orange {
+ background: rgba(255,165,0,0.15); color: #ffa500; border: 1px solid rgba(255,165,0,0.3); }
+.guide-overlay .pill.grey {
+ background: rgba(255,255,255,0.06); color: var(--dim); border: 1px solid var(--border); }
+.guide-overlay /* GRID */
+.grid2 {
+
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 500px) {
+.guide-overlay .grid2 {
+ grid-template-columns: 1fr; }
+.guide-overlay }
+
+.card {
+
+  background: var(--surf);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+.guide-overlay .card h3 {
+
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+}
+.guide-overlay .card p {
+
+  color: var(--dim);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.guide-overlay /* TABLE */
+.ref-table {
+
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 8px;
+}
+.guide-overlay .ref-table th {
+
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--dim);
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.guide-overlay .ref-table td {
+
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: var(--text);
+  vertical-align: top;
+}
+.guide-overlay .ref-table tr:last-child td {
+ border-bottom: none; }
+.guide-overlay .ref-table td:first-child {
+
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.guide-overlay /* DIVIDER */
+hr {
+
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 40px 0;
+}
+.guide-overlay /* DOT INDICATOR */
+.dot {
+
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+</style>
+<div id="guide-overlay">
+  <div id="guide-close">
+    <div id="guide-close-title">⬡ Staff Guide</div>
+    <button id="guide-close-btn">✕ Close</button>
+  </div>
+  <div class="guide-overlay">
+    <div class="guide-header">
+  <div class="guide-title">⬡ Aulac Big Stop</div>
+  <h1>Table Tracker<br>Staff Guide</h1>
+  <p>Everything you need to know to run the host stand</p>
+</div>
+
+<!-- LOGIN -->
+<div class="section">
+  <div class="section-label">Getting Started</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Open the app</strong>
+        <p>Tap the <strong>Aulac Big Stop</strong> icon on the iPad home screen. It will open fullscreen — no browser needed.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Enter the password</strong>
+        <p>Type the passcode on the login screen and tap <strong>ENTER</strong>. Ask your manager for the password if you don't have it.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Set the number of servers</strong>
+        <p>Use the <span class="pill grey">−</span> and <span class="pill grey">+</span> buttons in the top bar to match how many servers are on the floor today. The floor map updates automatically.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div class="section">
+  <div class="section-label">Screen Layout</div>
+  <div class="grid2">
+    <div class="card">
+      <h3>🗺 Floor Map (left)</h3>
+      <p>Shows every table and stool. Each colour belongs to a server's section. Seated tables glow brighter.</p>
+    </div>
+    <div class="card">
+      <h3>⚖ Rotation (right)</h3>
+      <p>Lists all servers with their guest count. The server with the lowest count is highlighted as <strong>Next Up</strong>.</p>
+    </div>
+    <div class="card">
+      <h3>▲ Next Up Banner (bottom)</h3>
+      <p>Large display showing who is next to be seated, plus the next two servers in line.</p>
+    </div>
+    <div class="card">
+      <h3>📊 Status Bar</h3>
+      <p>Shows seated tables, current guests, open tables, and daily totals for the shift.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SEATING -->
+<div class="section">
+  <div class="section-label">Seating a Table</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Tap the table on the floor map</strong>
+        <p>A modal will open showing the table number and which server it belongs to.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Select the party size</strong>
+        <p>Tap the number of guests (1–9). The table seats immediately and the server's guest count updates. Use <span class="pill grey">In Use</span> to mark a table as occupied without adding to the rotation count.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Clear when the table is done</strong>
+        <p>Tap the table again, then tap <span class="pill red">Clear</span>. The table resets to open.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout tip" style="margin-top:16px;">
+    <div class="callout-icon">💡</div>
+    <div>The timer in the modal shows how long the current party has been seated — useful for checking table turns.</div>
+  </div>
+</div>
+
+<!-- JOINED TABLES -->
+<div class="section">
+  <div class="section-label">Joining Tables Together</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Drag a chair-style table</strong>
+        <p>Press and slowly drag any <strong>rect</strong> table (the ones with individual chairs). Booths cannot be moved.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Drop it next to another table</strong>
+        <p>When close enough, it will snap and connect. A dashed border appears around the group.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Seat the group</strong>
+        <p>Tap any table in the group. If it spans two servers, you'll be asked for each server's guest count separately. Tap <span class="pill red">Clear</span> to unlink and reset positions.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ROTATION -->
+<div class="section">
+  <div class="section-label">Managing the Rotation</div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Next Up is automatic</strong>
+        <p>The server with the fewest guests is always shown as Next Up. You don't need to track this manually.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Adjust guest counts manually</strong>
+        <p>Use the <span class="pill grey">−</span> and <span class="pill grey">+</span> buttons beside each server's score to correct any count errors.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Select a server manually</strong>
+        <p>Tap a server row to highlight it. The next table seated will go to that server. Tap again to deselect.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout info" style="margin-top:16px;">
+    <div class="callout-icon">ℹ️</div>
+    <div>Tap the <strong>+ Seat</strong> button at the bottom of the rotation panel to log a walk-in or carry-out to the next server without using a table.</div>
+  </div>
+</div>
+
+<!-- BREAKS -->
+<div class="section">
+  <div class="section-label">Server Breaks</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Mark on break</strong>
+        <p>Tap the <span class="pill orange">☕</span> button beside a server's name and confirm. They will be skipped in the rotation and shown as <span class="pill orange">☕ ON BREAK</span>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Seating their tables while on break</strong>
+        <p>If a guest sits in a break server's section, tap the table and you'll be prompted to assign it to a different server. That server gets the rotation credit and the table changes colour to theirs.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Return from break</strong>
+        <p>Tap <span class="pill orange">☕</span> again and confirm. Their guest count is automatically set to the average of all active servers so they re-enter the rotation fairly.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SYNC -->
+<div class="section">
+  <div class="section-label">Multiple iPads &amp; Sync</div>
+  <div class="card" style="margin-bottom:12px;">
+    <h3><span class="dot" style="background:#3FBD5A;"></span>Green dot — Synced</h3>
+    <p>All changes are live across every iPad. What one person does, everyone sees within a couple of seconds.</p>
+  </div>
+  <div class="card">
+    <h3><span class="dot" style="background:#E84040;"></span>Red dot — Offline</h3>
+    <p>No internet connection. The app still works locally — changes will sync automatically when the connection returns.</p>
+  </div>
+  <div class="callout info" style="margin-top:12px;">
+    <div class="callout-icon">ℹ️</div>
+    <div>The app saves automatically. If the iPad restarts or the app is closed, everything will be right where you left it when you reopen it.</div>
+  </div>
+</div>
+
+<!-- HEADER BUTTONS -->
+<div class="section">
+  <div class="section-label">Header Buttons Reference</div>
+  <div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+    <table class="ref-table">
+      <thead>
+        <tr>
+          <th>Button</th>
+          <th>What it does</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>− / + Servers</td>
+          <td>Decrease or increase the number of servers on the floor. Updates the floor map sections instantly.</td>
+        </tr>
+        <tr>
+          <td>↩ Undo</td>
+          <td>Reverses the last action (seating, clearing, score change). Turns gold when available.</td>
+        </tr>
+        <tr>
+          <td>↪ Redo</td>
+          <td>Re-applies an action that was undone.</td>
+        </tr>
+        <tr>
+          <td>↩ Reset All Table Positions</td>
+          <td>Returns all moved/joined tables to their original positions. Does not affect seating.</td>
+        </tr>
+        <tr>
+          <td>⏻ Logout</td>
+          <td>Returns to the password screen. The shift data is saved.</td>
+        </tr>
+        <tr>
+          <td>✕ Clear All</td>
+          <td>Requires the manager password. Resets the entire shift — all tables, guest counts, and daily totals.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- TIPS -->
+<div class="section">
+  <div class="section-label">Quick Tips</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">💡</div>
+      <div class="step-body">
+        <strong>Rename servers</strong>
+        <p>Tap the server name in the rotation panel and type to rename. The name appears on the Next Up banner.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">💡</div>
+      <div class="step-body">
+        <strong>Accidentally seated the wrong party size?</strong>
+        <p>Tap the table again, select the correct number, and tap <span class="pill gold">Update</span>. Or tap <span class="pill grey">↩ Undo</span> to reverse it entirely.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">💡</div>
+      <div class="step-body">
+        <strong>Starting a new shift</strong>
+        <p>Ask your manager to tap <span class="pill red">✕ Clear All</span> and enter the password. This resets everything for the day.</p>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+</div>
+<script>
+document.getElementById('guide-open-btn').addEventListener('pointerup', ()=>{
+  document.getElementById('guide-overlay').classList.add('open');
+});
+document.getElementById('guide-close-btn').addEventListener('pointerup', ()=>{
+  document.getElementById('guide-overlay').classList.remove('open');
+  document.getElementById('guide-overlay').scrollTop = 0;
+});
 </script>
 </body>
 </html>
