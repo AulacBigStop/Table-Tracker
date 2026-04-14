@@ -1997,6 +1997,10 @@ function applyServerCount(newCount){
       st.guestTotals[s] = oldCount > 0 ? Math.round(totalGuests / oldCount) : 0;
       if(st.events && !st.events[s]) st.events[s] = [];
       st.newServers.add(s);
+      // Clear any leftover cut state for this slot
+      st.cutServers.delete(s);
+      st.onBreak.delete(s);
+      st.cutHistory = st.cutHistory.filter(r => r.slot !== s);
     }
   }
 
