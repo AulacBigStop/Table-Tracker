@@ -786,39 +786,58 @@ function showCutModal(s){
       const replaceName  = st.names[replaceSec] || `Server ${replaceSec}`;
       const replaceCount = Math.round(secGuestScore(replaceSec));
 
-      // Save cut server s to history
-      st.cutHistory.push({ slot: s, name, guestCount: Math.round(secGuestScore(s)) });
+      // Helper: resolve the effective section for a table record
+      function tblSec(d, tid){ return d.coverageSec != null ? +d.coverageSec : d.sec != null ? +d.sec : secOf(+tid); }
 
-      // Mark cut server s's tables amber-brown
+      // 1 — Save cut server to history and amber its tables
+      st.cutHistory.push({ slot: s, name, guestCount: Math.round(secGuestScore(s)) });
       Object.keys(st.tables).forEach(tid => {
         const d = st.tables[+tid];
-        const tSec = d.coverageSec != null ? +d.coverageSec : d.sec != null ? +d.sec : null;
-        const physSec = tSec != null ? tSec : secOf(+tid);
-        if(physSec === s) st.tables[+tid] = {...d, cutTable: true};
+        if(tblSec(d, tid) === s) st.tables[+tid] = {...d, cutTable: true};
       });
 
-      // Move replaceSec's identity into slot s
+      // 2 — Recolour replaceSec's tables to section s
+      Object.keys(st.tables).forEach(tid => {
+        const d = st.tables[+tid];
+        if(d.cutTable) return;
+        if(tblSec(d, tid) === replaceSec) st.tables[+tid] = {...d, sec: s, coverageSec: s};
+      });
+
+      // 3 — Copy replaceSec's identity into slot s
       st.names[s]       = replaceName;
       st.guestTotals[s] = replaceCount;
       st.newServers.delete(s);
       st.onBreak.delete(s);
 
-      // Recolour all of replaceSec's seated tables to section s's colour
-      Object.keys(st.tables).forEach(tid => {
-        const d = st.tables[+tid];
-        if(d.cutTable) return;
-        const tSec = d.coverageSec != null ? +d.coverageSec : d.sec != null ? +d.sec : null;
-        const physSec = tSec != null ? tSec : secOf(+tid);
-        if(physSec === replaceSec){
-          st.tables[+tid] = {...d, sec: s, coverageSec: s};
-        }
-      });
+      // 4 — Compact: if replaceSec is not the last slot, fill it with the last server
+      const last = st.servers;
+      if(replaceSec !== last){
+        const lastName  = st.names[last] || `Server ${last}`;
+        const lastCount = Math.round(secGuestScore(last));
+        // Recolour last server's tables to replaceSec
+        Object.keys(st.tables).forEach(tid => {
+          const d = st.tables[+tid];
+          if(d.cutTable) return;
+          if(tblSec(d, tid) === last) st.tables[+tid] = {...d, sec: replaceSec, coverageSec: replaceSec};
+        });
+        st.names[replaceSec]       = lastName;
+        st.guestTotals[replaceSec] = lastCount;
+        if(st.newServers.has(last)){ st.newServers.delete(last); st.newServers.add(replaceSec); }
+        if(st.onBreak.has(last)){   st.onBreak.delete(last);   st.onBreak.add(replaceSec); }
+        st.cutServers.delete(replaceSec); // no longer cut — it now holds the last server
+      }
 
-      // Mark the now-vacated slot as cut (removes it from active rotation)
-      st.cutServers.add(replaceSec);
-      st.onBreak.delete(replaceSec);
-      st.newServers.delete(replaceSec);
-      if(st.selectedSec === s || st.selectedSec === replaceSec) st.selectedSec = null;
+      // 5 — Clear and remove the last slot
+      delete st.names[last];
+      delete st.guestTotals[last];
+      st.newServers.delete(last);
+      st.onBreak.delete(last);
+      st.cutServers.delete(last);
+
+      // 6 — Decrement count
+      st.servers = Math.max(2, last - 1);
+      document.getElementById('srv-count').textContent = st.servers;
+      if(st.selectedSec === s || st.selectedSec === replaceSec || st.selectedSec === last) st.selectedSec = null;
 
       snapshotState();
       renderAll();
