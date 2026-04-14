@@ -836,6 +836,7 @@ function renderRot(){
   const next = nextUp();
 
   for(const s of secs){
+    if(st.cutServers.has(s)) continue;  // shown in CUT SERVERS section instead
     const isNext = s === next && st.selectedSec === null;
     const isSel  = s === st.selectedSec;
     const col    = FLOOR_C[s];
