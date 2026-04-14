@@ -91,7 +91,7 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
 #rot-title{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:1px;}
 
 /* server list */
-#rot-scroll{flex:1;overflow-y:hidden;overflow-x:hidden;padding:2px 5px 2px;
+#rot-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:2px 5px 2px;
   display:flex;flex-direction:column;gap:2px;}
 #rot-scroll::-webkit-scrollbar{width:3px;}
 #rot-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px;}
@@ -133,6 +133,15 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
   background:rgba(255,255,255,0.04);color:var(--dim);font-size:13px;line-height:1;
   cursor:pointer;padding:0;margin-left:2px;}
 .break-btn.active{background:rgba(255,165,0,0.25);color:#FFA500;border-color:rgba(255,165,0,0.6);box-shadow:0 0 6px rgba(255,165,0,0.3);}
+.cut-btn{flex:0 0 26px;height:26px;border-radius:5px;border:1px solid rgba(255,80,80,0.2);
+  background:rgba(255,80,80,0.05);color:rgba(255,100,100,0.55);font-size:12px;line-height:1;
+  cursor:pointer;padding:0;margin-left:2px;font-weight:700;}
+.sec-row.cut-server{opacity:0.5;background:rgba(255,80,80,0.05);outline:1px solid rgba(255,80,80,0.18);border-radius:6px;}
+.sec-row.cut-server .sec-badge{filter:grayscale(0.6);}
+.sec-row.cut-server .sec-name-inp{opacity:0.6;text-decoration:line-through;}
+.sec-row.cut-server .sec-adj-btn,.sec-row.cut-server .break-btn{opacity:0.25;pointer-events:none;}
+.cut-section-sep{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;color:rgba(255,80,80,0.5);
+  letter-spacing:2px;text-align:center;padding:8px 0 4px;}
 
 /* ACTION BAR */
 #rot-actions{flex-shrink:0;background:var(--surf);border-top:1px solid var(--border);padding:7px 8px;display:flex;flex-direction:column;gap:5px;}
@@ -271,6 +280,45 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
   </div>
 </div>
 
+<!-- NAME PICKER -->
+<div id="name-picker" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10001;align-items:center;justify-content:center;">
+  <div style="background:#17171f;border:1px solid rgba(255,255,255,0.11);border-radius:14px;padding:20px;width:min(340px,92vw);display:flex;flex-direction:column;gap:10px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:#FFD700;letter-spacing:1px;" id="name-picker-title">SELECT SERVER NAME</div>
+    <div id="name-picker-list" style="display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch;"></div>
+    <div style="display:flex;gap:7px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.08);">
+      <input id="name-picker-add-input" type="text" placeholder="Add a name…" maxlength="20"
+        style="flex:1;padding:10px;border-radius:8px;border:1px dashed rgba(255,215,0,0.3);background:rgba(255,215,0,0.04);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none;">
+      <button id="name-picker-add-btn" style="padding:10px 14px;border-radius:8px;border:1px solid rgba(255,215,0,0.35);background:rgba(255,215,0,0.1);color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;">＋</button>
+    </div>
+    <button id="name-picker-cancel" style="padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:13px;cursor:pointer;touch-action:manipulation;">Cancel</button>
+  </div>
+</div>
+
+<!-- SERVER PICKER (for existing-server replacement) -->
+<div id="srv-picker" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10001;align-items:center;justify-content:center;">
+  <div style="background:#17171f;border:1px solid rgba(255,255,255,0.11);border-radius:14px;padding:20px;width:min(320px,92vw);display:flex;flex-direction:column;gap:8px;">
+    <div id="srv-picker-title" style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:#FFD700;letter-spacing:1px;margin-bottom:4px;"></div>
+    <div id="srv-picker-list" style="display:flex;flex-direction:column;gap:7px;max-height:55vh;overflow-y:auto;-webkit-overflow-scrolling:touch;"></div>
+    <button id="srv-picker-cancel" style="padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:13px;cursor:pointer;touch-action:manipulation;margin-top:4px;">Cancel</button>
+  </div>
+</div>
+
+<!-- CUT SERVER MODAL -->
+<div id="cut-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:700;align-items:center;justify-content:center;">
+  <div style="background:#17171f;border:1px solid rgba(255,255,255,0.11);border-radius:14px;padding:22px;width:min(320px,92vw);display:flex;flex-direction:column;gap:10px;">
+    <div id="cut-modal-title" style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:#ff8080;letter-spacing:.5px;"></div>
+    <button id="cut-opt-replace" style="padding:14px 16px;border-radius:10px;border:1px solid rgba(255,215,0,0.3);background:rgba(255,215,0,0.07);color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;text-align:left;">
+      ★ Replace with New Server<br>
+      <span style="font-size:10px;opacity:.6;font-weight:400;">New server takes over section · starts at avg count</span>
+    </button>
+    <button id="cut-opt-remove" style="padding:14px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;text-align:left;">
+      ↔ Replace with Existing Server<br>
+      <span style="font-size:10px;opacity:.6;font-weight:400;">Move a current server into this section · their tables recolour</span>
+    </button>
+    <button id="cut-modal-cancel" style="padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;touch-action:manipulation;">Cancel</button>
+  </div>
+</div>
+
 <!-- BREAK CONFIRM -->
 <div id="confirm-overlay">
   <div id="confirm-box">
@@ -283,7 +331,7 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
 </div>
 
 <!-- PASSWORD MODAL -->
-<div id="pwd-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:700;align-items:center;justify-content:center;">
+<div id="pwd-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10002;align-items:center;justify-content:center;">
   <div style="background:#17171f;border:1px solid rgba(255,255,255,0.11);border-radius:14px;padding:24px;width:min(280px,88vw);display:flex;flex-direction:column;gap:14px;align-items:center;">
     <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:#eee;">Enter Password</div>
     <input id="pwd-input" type="password" inputmode="numeric"
@@ -324,12 +372,26 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
 
 <script>
 // ── COLORS
+// ── SERVER NAME LIST  (persisted in localStorage — add names via the picker)
+let SERVER_NAME_LIST = [];
+const LS_NAMES_KEY = 'tt_names_v1';
+function saveNameList(){
+  try{ localStorage.setItem(LS_NAMES_KEY, JSON.stringify(SERVER_NAME_LIST)); }catch(e){}
+}
+(function loadNameList(){
+  try{
+    const raw = localStorage.getItem(LS_NAMES_KEY);
+    if(raw){ const arr = JSON.parse(raw); if(Array.isArray(arr) && arr.length > 0) SERVER_NAME_LIST = arr; }
+  }catch(e){}
+})();
+
 const FLOOR_C = {
   1:{bg:'#FFD700',tx:'#000'}, 2:{bg:'#FFFFFF',tx:'#000'}, 3:{bg:'#FF85B3',tx:'#000'},
-  4:{bg:'#FF8C00',tx:'#000'}, 5:{bg:'#9B6333',tx:'#fff'}, 6:{bg:'#00C2E8',tx:'#000'},
+  4:{bg:'#FF8C00',tx:'#000'}, 5:{bg:'#9B6333',tx:'#000'}, 6:{bg:'#00C2E8',tx:'#000'},
   7:{bg:'#3FBD5A',tx:'#000'}, 8:{bg:'#909090',tx:'#fff'}, 9:{bg:'#AA44DD',tx:'#fff'},
   10:{bg:'#E82222',tx:'#fff'},11:{bg:'#8B0000',tx:'#fff'}
 };
+const CUT_TABLE_C = {bg:'#5a3a1a', tx:'#ffffff'}; // amber-brown — server was cut
 
 // ── FLOOR SECTION LAYOUTS
 const L = {
@@ -387,6 +449,8 @@ const st = {
   dailyGuests:0,       // total guests seated today
   newServers: new Set(),
   onBreak: new Set(),
+  cutServers: new Set(),   // servers cut without replacement (slot excluded from rotation)
+  cutHistory: [],          // [{slot, name, guestCount}] — servers replaced in-place
   selectedSec: null,
   rotMode: false,
   mTable:null, mParty:null, mGroup:null, mMultiSec:null, mMultiStep:0, mOverrideSec:null,
@@ -413,7 +477,10 @@ function stateToObj(){
     dailyGuests: st.dailyGuests,
     newServers:  [...st.newServers],
     onBreak:     [...st.onBreak],
-    selectedSec: st.selectedSec ?? null
+    cutServers:  [...st.cutServers],
+    cutHistory:  st.cutHistory,
+    selectedSec: st.selectedSec ?? null,
+    nameList:    SERVER_NAME_LIST
   };
 }
 // ── UNDO / REDO STACKS
@@ -468,7 +535,13 @@ function deserializeState(data){
   st.dailyGuests = data.dailyGuests ?? 0;
   st.newServers  = new Set(data.newServers ?? []);
   st.onBreak     = new Set(data.onBreak    ?? []);
+  st.cutServers  = new Set(data.cutServers ?? []);
+  st.cutHistory  = data.cutHistory ?? [];
   st.selectedSec = data.selectedSec ?? null;
+  if(data.nameList && Array.isArray(data.nameList) && data.nameList.length > 0){
+    SERVER_NAME_LIST = data.nameList;
+    saveNameList();
+  }
   st.links = {};
   for(const [k,v] of Object.entries(data.links ?? {})) st.links[+k] = new Set(v);
   const sc = document.getElementById('srv-count'); if(sc) sc.textContent = st.servers;
@@ -504,20 +577,20 @@ function clearUnassignedStools(){
   }
 }
 function nextUp(){
-  // Newly added servers jump to the front (priority overrides guest count)
   if(st.newServers.size > 0){
     let min=Infinity, best=null;
     for(const s of st.newServers){
       if(s > st.servers) continue;
       if(st.onBreak.has(s)) continue;
+      if(st.cutServers.has(s)) continue;
       const sc=secGuestScore(s); if(sc<min){min=sc;best=s;}
     }
     if(best !== null) return best;
   }
-  // Lowest guest total is next up (skip on-break servers)
   let min=Infinity, best=null;
   for(let s=1;s<=st.servers;s++){
     if(st.onBreak.has(s)) continue;
+    if(st.cutServers.has(s)) continue;
     const sc=secGuestScore(s);if(sc<min){min=sc;best=s;}
   }
   return best;
@@ -548,6 +621,216 @@ function updateActionContext(){
       ? `<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${c.bg};margin-right:5px;vertical-align:middle;"></span>Next up: <strong>${name}</strong>`
       : 'Next up: —';
   }
+}
+
+// ── NAME PICKER
+function showNamePicker(title, onPick, forceMode){
+  const overlay  = document.getElementById('name-picker');
+  const list     = document.getElementById('name-picker-list');
+  const addInput = document.getElementById('name-picker-add-input');
+  const cancelBtn = document.getElementById('name-picker-cancel');
+  document.getElementById('name-picker-title').textContent = title;
+  addInput.value = '';
+  cancelBtn.style.display = forceMode ? 'none' : '';
+
+  const usedNames = new Set();
+  for(let i = 1; i <= st.servers; i++) usedNames.add(st.names[i] || `Server ${i}`);
+
+  function renderList(){
+    list.innerHTML = '';
+    SERVER_NAME_LIST.forEach((n, idx) => {
+      const inUse = usedNames.has(n);
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:6px;';
+
+      const btn = document.createElement('button');
+      btn.textContent = n;
+      btn.style.cssText = `flex:1;padding:10px 12px;border-radius:8px;text-align:left;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;cursor:${inUse?'default':'pointer'};touch-action:manipulation;border:1px solid ${inUse?'rgba(255,255,255,0.06)':'rgba(255,255,255,0.14)'};background:${inUse?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.06)'};color:${inUse?'rgba(255,255,255,0.2)':'var(--text)'};`;
+      if(!inUse) btn.addEventListener('pointerup', ()=>{ overlay.style.display='none'; onPick(n); });
+
+      const del = document.createElement('button');
+      del.textContent = '✕';
+      del.title = 'Remove from list';
+      del.style.cssText = `padding:10px 11px;border-radius:8px;border:1px solid rgba(255,80,80,0.2);background:rgba(255,80,80,0.06);color:rgba(255,80,80,0.6);font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;touch-action:manipulation;flex-shrink:0;`;
+      del.addEventListener('pointerup', ()=>{
+        const pwdOverlay = document.getElementById('pwd-overlay');
+        const pwdInput   = document.getElementById('pwd-input');
+        const pwdError   = document.getElementById('pwd-error');
+        pwdInput.value = '';
+        pwdError.style.display = 'none';
+        pwdOverlay.style.display = 'flex';
+        setTimeout(()=>pwdInput.focus(), 100);
+        document.getElementById('pwd-confirm').onpointerup = () => {
+          if(pwdInput.value === '2047'){
+            pwdOverlay.style.display = 'none';
+            SERVER_NAME_LIST.splice(idx, 1);
+            saveNameList();
+            pushToFirebase();
+            renderList();
+          } else {
+            pwdError.style.display = 'block';
+            pwdInput.value = '';
+            pwdInput.focus();
+          }
+        };
+        document.getElementById('pwd-cancel').onpointerup = () => {
+          pwdOverlay.style.display = 'none';
+        };
+        pwdInput.onkeydown = e => { if(e.key==='Enter') document.getElementById('pwd-confirm').dispatchEvent(new PointerEvent('pointerup')); };
+      });
+
+      row.appendChild(btn);
+      row.appendChild(del);
+      list.appendChild(row);
+    });
+  }
+
+  // Add button handler
+  const addBtn = document.getElementById('name-picker-add-btn');
+  addBtn.onpointerup = () => {
+    const n = addInput.value.trim();
+    if(!n) return;
+    if(!SERVER_NAME_LIST.includes(n)){ SERVER_NAME_LIST.push(n); saveNameList(); pushToFirebase(); }
+    addInput.value = '';
+    renderList();
+  };
+  addInput.onkeydown = e => { if(e.key === 'Enter') addBtn.dispatchEvent(new PointerEvent('pointerup')); };
+
+  renderList();
+  overlay.style.display = 'flex';
+  setTimeout(() => list.scrollTop = 0, 0);
+}
+document.getElementById('name-picker-cancel').addEventListener('pointerup', ()=>{
+  document.getElementById('name-picker').style.display = 'none';
+});
+
+// Chain through name selection for each server section (used after Clear All)
+function pickNamesSequentially(current, total, onDone){
+  showNamePicker(
+    `SELECT NAME FOR SERVER ${current} of ${total}`,
+    (name) => {
+      st.names[current] = name;
+      if(current < total) pickNamesSequentially(current + 1, total, onDone);
+      else onDone();
+    },
+    true // forceMode — hides Cancel so selection is mandatory
+  );
+}
+
+// Server picker — shows active servers (excluding `excludeSec`) to choose from
+function showSrvPicker(title, excludeSec, onPick){
+  const overlay = document.getElementById('srv-picker');
+  const list    = document.getElementById('srv-picker-list');
+  document.getElementById('srv-picker-title').textContent = title;
+  list.innerHTML = '';
+
+  for(let i = st.servers; i >= 1; i--){   // bottom-first order
+    if(i === excludeSec) continue;
+    if(st.cutServers.has(i)) continue;
+    const n   = st.names[i] || `Server ${i}`;
+    const col = FLOOR_C[i];
+    const score = Math.round(secGuestScore(i));
+    const btn = document.createElement('button');
+    btn.style.cssText = `display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:#eee;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;cursor:pointer;touch-action:manipulation;`;
+    btn.innerHTML = `<span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${col.bg};flex-shrink:0;"></span><span style="flex:1;text-align:left;">${n}</span><span style="color:var(--dim);font-size:11px;">${score} pts</span>`;
+    btn.addEventListener('pointerup', () => { overlay.style.display='none'; onPick(i); });
+    list.appendChild(btn);
+  }
+
+  overlay.style.display = 'flex';
+}
+document.getElementById('srv-picker-cancel').addEventListener('pointerup', ()=>{
+  document.getElementById('srv-picker').style.display = 'none';
+});
+
+// ── CUT SERVER LOGIC
+function showCutModal(s){
+  const name = st.names[s] || `Server ${s}`;
+  document.getElementById('cut-modal-title').textContent = `✂  Cut ${name}`;
+  const modal = document.getElementById('cut-modal');
+  modal.style.display = 'flex';
+
+  document.getElementById('cut-modal-cancel').onpointerup = () => { modal.style.display='none'; };
+
+  // Option 1: Replace with a new server (takes over the same slot)
+  document.getElementById('cut-opt-replace').onpointerup = () => {
+    modal.style.display = 'none';
+    showNamePicker(`NAME FOR REPLACEMENT IN SECTION ${s}`, (chosenName) => {
+      // Save old server's identity to cut history
+      st.cutHistory.push({ slot: s, name, guestCount: Math.round(secGuestScore(s)) });
+      // Mark existing seated tables as cut
+      Object.keys(st.tables).forEach(tid => {
+        const d = st.tables[+tid];
+        const tSec = d.coverageSec || d.sec || secOf(+tid);
+        if(tSec === s) st.tables[+tid] = {...d, cutTable: true};
+      });
+      // Rename slot to new server
+      st.names[s] = chosenName;
+      // New server starts at average of active peers
+      const active = Array.from({length:st.servers},(_,i)=>i+1)
+        .filter(x => !st.cutServers.has(x) && !st.onBreak.has(x) && x !== s);
+      st.guestTotals[s] = active.length
+        ? Math.round(active.reduce((a,x)=>a+(st.guestTotals[x]||0),0)/active.length) : 0;
+      st.newServers.add(s);
+      st.onBreak.delete(s);
+      if(st.selectedSec === s) st.selectedSec = null;
+      snapshotState();
+      renderAll();
+    });
+  };
+
+  // Option 2: Replace with existing server (they move into this section; their slot is removed)
+  document.getElementById('cut-opt-remove').onpointerup = () => {
+    modal.style.display = 'none';
+    showSrvPicker(`MOVE INTO SECTION ${s}`, s, (replaceSec) => {
+      const replaceName  = st.names[replaceSec] || `Server ${replaceSec}`;
+      const replaceCount = Math.round(secGuestScore(replaceSec));
+
+      // Save cut server to history
+      st.cutHistory.push({ slot: s, name, guestCount: Math.round(secGuestScore(s)) });
+      // Mark cut server's tables amber-brown
+      Object.keys(st.tables).forEach(tid => {
+        const d = st.tables[+tid];
+        const tSec = d.coverageSec || d.sec || secOf(+tid);
+        if(tSec === s) st.tables[+tid] = {...d, cutTable: true};
+      });
+      // Move existing server into the cut slot (same slot number, new name + count)
+      st.names[s]       = replaceName;
+      st.guestTotals[s] = replaceCount;
+      // Recolour existing server's seated tables to the new section colour
+      Object.keys(st.tables).forEach(tid => {
+        const d = st.tables[+tid];
+        const tSec = d.coverageSec || d.sec || secOf(+tid);
+        if(tSec === replaceSec && !d.cutTable){
+          st.tables[+tid] = {...d, sec: s, coverageSec: s};
+        }
+      });
+      // Remove the now-vacated slot by reducing server count
+      // (swap it to the last slot first if it isn't already)
+      if(replaceSec !== st.servers){
+        const lastSec = st.servers;
+        // Move last server into the vacated slot
+        st.names[replaceSec]       = st.names[lastSec];
+        st.guestTotals[replaceSec] = st.guestTotals[lastSec] || 0;
+        st.onBreak.delete(lastSec); st.newServers.delete(lastSec);
+        // Remap last server's tables to their new slot number
+        Object.keys(st.tables).forEach(tid => {
+          const d = st.tables[+tid];
+          const tSec = d.coverageSec || d.sec || secOf(+tid);
+          if(tSec === lastSec){
+            st.tables[+tid] = {...d, sec: replaceSec, coverageSec: replaceSec};
+          }
+        });
+      }
+      st.onBreak.delete(replaceSec); st.newServers.delete(replaceSec);
+      if(st.selectedSec === s || st.selectedSec === replaceSec) st.selectedSec = null;
+      // Reduce count — removes the vacated last slot
+      st.servers = Math.max(2, st.servers - 1);
+      document.getElementById('srv-count').textContent = st.servers;
+      snapshotState();
+      renderAll();
+    });
+  };
 }
 
 // ── ROTATION RENDER
@@ -586,10 +869,19 @@ function renderRot(){
     else if(isOnBreak){ const bl=document.createElement('div');bl.className='next-lbl';bl.style.cssText='color:#FFA500;font-size:9px;letter-spacing:.5px;';bl.textContent='☕ ON BREAK';nameCol.appendChild(bl); }
     else if(st.newServers.has(s)){ const nl=document.createElement('div');nl.className='next-lbl';nl.textContent='★ NEW · NEXT UP';nameCol.appendChild(nl); }
     else if(isNext){ const nl=document.createElement('div');nl.className='next-lbl';nl.textContent='NEXT UP';nameCol.appendChild(nl); }
-    const ni = document.createElement('input');
-    ni.type='text'; ni.className='sec-name-inp'; ni.value=name; ni.maxLength=16; ni.dataset.s=s;
-    ni.addEventListener('change', e => { st.names[+e.target.dataset.s]=e.target.value.trim()||name; updateActionContext(); renderBanner(); });
-    ni.addEventListener('keydown', e => { if(e.key==='Enter') e.target.blur(); });
+    const ni = document.createElement('div');
+    ni.className='sec-name-inp';
+    ni.style.cssText='cursor:pointer;border-bottom:1px dashed rgba(255,255,255,0.18);';
+    ni.textContent = name;
+    ni.title = 'Tap to change name';
+    ni.addEventListener('pointerup', e => {
+      e.stopPropagation();
+      showNamePicker(`RENAME ${name.toUpperCase()}`, (newName) => {
+        st.names[s] = newName;
+        snapshotState();
+        renderAll();
+      });
+    });
     nameCol.appendChild(ni);
     rowTop.appendChild(badge);
     rowTop.appendChild(nameCol);
@@ -643,9 +935,140 @@ function renderRot(){
     });
     rowBot.appendChild(btnBreak);
 
+    // ✂ Cut button (not shown for servers already cut)
+    if(!st.cutServers.has(s)){
+      const btnCut = document.createElement('button');
+      btnCut.className = 'cut-btn';
+      btnCut.textContent = '✂';
+      btnCut.title = 'Cut server';
+      btnCut.addEventListener('pointerup', ev => { ev.stopPropagation(); showCutModal(s); });
+      rowBot.appendChild(btnCut);
+    }
+
     row.appendChild(rowTop);
     row.appendChild(rowBot);
     wrap.appendChild(row);
+  }
+
+  // ── CUT SERVERS — collapsible button at bottom
+  const hasCut = st.cutServers.size > 0 || st.cutHistory.length > 0;
+  if(hasCut){
+    const total = st.cutServers.size + st.cutHistory.length;
+    const toggleBtn = document.createElement('button');
+    toggleBtn.id = 'cut-toggle-btn';
+    toggleBtn.style.cssText = `width:100%;margin-top:6px;padding:10px 14px;border-radius:8px;border:1px solid rgba(255,80,80,0.25);background:rgba(255,80,80,0.07);color:rgba(255,100,100,0.8);font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;cursor:pointer;touch-action:manipulation;text-align:center;`;
+    const isOpen = wrap._cutOpen || false;
+    toggleBtn.textContent = isOpen ? `▲ CUT SERVERS (${total})` : `▼ CUT SERVERS (${total})`;
+    toggleBtn.addEventListener('pointerup', () => {
+      wrap._cutOpen = !wrap._cutOpen;
+      renderRot();
+    });
+    wrap.appendChild(toggleBtn);
+
+    if(isOpen){
+      // Servers replaced in-place (history records — read-only)
+      for(const rec of st.cutHistory){
+        const col = FLOOR_C[rec.slot] || FLOOR_C[1];
+        const row = document.createElement('div');
+        row.className = 'sec-row cut-server';
+
+        const rowTop = document.createElement('div');
+        rowTop.className = 'sec-row-top';
+        const badge = document.createElement('div');
+        badge.className = 'sec-badge';
+        badge.style.cssText = `background:${col.bg};color:${col.tx}`;
+        badge.textContent = rec.slot;
+        const nameCol = document.createElement('div');
+        nameCol.className = 'sec-name-col';
+        const cutLbl = document.createElement('div');
+        cutLbl.className = 'next-lbl';
+        cutLbl.style.cssText = 'color:#ff8080;font-size:9px;letter-spacing:.5px;';
+        cutLbl.textContent = '✂ CUT';
+        nameCol.appendChild(cutLbl);
+        const nameEl = document.createElement('div');
+        nameEl.className = 'sec-name-inp';
+        nameEl.style.cssText = 'pointer-events:none;';
+        nameEl.textContent = rec.name;
+        nameCol.appendChild(nameEl);
+        rowTop.appendChild(badge);
+        rowTop.appendChild(nameCol);
+
+        const rowBot = document.createElement('div');
+        rowBot.className = 'sec-row-bot';
+        const scoreEl = document.createElement('div');
+        scoreEl.className = 'sec-score';
+        scoreEl.style.color = 'var(--dim)';
+        scoreEl.textContent = rec.guestCount;
+        rowBot.appendChild(scoreEl);
+
+        row.appendChild(rowTop);
+        row.appendChild(rowBot);
+        wrap.appendChild(row);
+      }
+
+      // Servers cut without replacement (can be reinstated)
+      for(const s of st.cutServers){
+        if(s > st.servers) continue;
+        const col  = FLOOR_C[s];
+        const name = st.names[s] || `Server ${s}`;
+        const row  = document.createElement('div');
+        row.className = 'sec-row cut-server';
+
+        const rowTop = document.createElement('div');
+        rowTop.className = 'sec-row-top';
+        const badge = document.createElement('div');
+        badge.className = 'sec-badge';
+        badge.style.cssText = `background:${col.bg};color:${col.tx}`;
+        badge.textContent = s;
+        const nameCol = document.createElement('div');
+        nameCol.className = 'sec-name-col';
+        const cutLbl = document.createElement('div');
+        cutLbl.className = 'next-lbl';
+        cutLbl.style.cssText = 'color:#ff8080;font-size:9px;letter-spacing:.5px;';
+        cutLbl.textContent = '✂ CUT';
+        nameCol.appendChild(cutLbl);
+        const nameEl = document.createElement('div');
+        nameEl.className = 'sec-name-inp';
+        nameEl.style.cssText = 'pointer-events:none;';
+        nameEl.textContent = name;
+        nameCol.appendChild(nameEl);
+        rowTop.appendChild(badge);
+        rowTop.appendChild(nameCol);
+
+        const rowBot = document.createElement('div');
+        rowBot.className = 'sec-row-bot';
+        const scoreEl = document.createElement('div');
+        scoreEl.className = 'sec-score';
+        scoreEl.style.color = 'var(--dim)';
+        scoreEl.textContent = Math.round(secGuestScore(s));
+        rowBot.appendChild(scoreEl);
+
+        const btnReinstate = document.createElement('button');
+        btnReinstate.style.cssText = 'flex:0 0 auto;padding:0 8px;height:26px;border-radius:5px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:var(--dim);font-size:12px;cursor:pointer;touch-action:manipulation;margin-left:auto;font-family:inherit;';
+        btnReinstate.textContent = '↩';
+        btnReinstate.title = 'Reinstate server';
+        btnReinstate.addEventListener('pointerup', ev => {
+          ev.stopPropagation();
+          showConfirm(`Reinstate ${name}?`, () => {
+            st.cutServers.delete(s);
+            Object.keys(st.tables).forEach(tid => {
+              const d = st.tables[+tid];
+              if(d.cutTable && (d.sec === s || d.coverageSec === s)){
+                const nd = {...d}; delete nd.cutTable; st.tables[+tid] = nd;
+              }
+            });
+            const active = Array.from({length:st.servers},(_,i)=>i+1).filter(x=>!st.cutServers.has(x)&&!st.onBreak.has(x)&&x!==s);
+            if(active.length) st.guestTotals[s] = Math.round(active.reduce((a,x)=>a+(st.guestTotals[x]||0),0)/active.length);
+            snapshotState(); renderAll();
+          });
+        });
+        rowBot.appendChild(btnReinstate);
+
+        row.appendChild(rowTop);
+        row.appendChild(rowBot);
+        wrap.appendChild(row);
+      }
+    }
   }
 
   updateActionContext();
@@ -772,7 +1195,7 @@ function renderFloor(){
     const s = secOf(id); if(!s) continue;
     // Use the section the table was seated under (persists through layout changes)
     const colorSec = (seated && d.coverageSec) ? d.coverageSec : (seated && d.sec) ? d.sec : s;
-    const c=FLOOR_C[colorSec];
+    const c = (seated && d.cutTable) ? CUT_TABLE_C : FLOOR_C[colorSec];
     // Use moved position if set, otherwise original
     const rpos = st.movedPos[id] ? {...pos, l:st.movedPos[id].l, t:st.movedPos[id].t} : pos;
 
@@ -1440,11 +1863,10 @@ function doSeat(){
     const ids = [...group].sort((a,b)=>a-b);
     const primary = ids[0];
     const prevParty = [...group].map(gid=>st.tables[gid]?.party).find(p=>p!==undefined)??null;
-    // Set all members to same party
     const prevSeatedAt = [...group].map(g=>st.tables[g]?.seatedAt).find(t=>t) || Date.now();
-    for(const gid of ids) st.tables[gid] = {party: st.mParty, seatedAt: prevParty ? prevSeatedAt : Date.now(), sec: st.mOverrideSec || secOf(gid), ...(st.mOverrideSec ? {coverageSec: st.mOverrideSec} : {})};
-    // Log rotation once — skip if "In Use" (party === 0)
-    const s = st.mOverrideSec || secOf(primary);
+    const effectiveSec = st.mOverrideSec || secOf(primary);
+    for(const gid of ids) st.tables[gid] = {party: st.mParty, seatedAt: prevParty ? prevSeatedAt : Date.now(), sec: effectiveSec, ...(st.mOverrideSec ? {coverageSec: st.mOverrideSec} : {})};
+    const s = effectiveSec;
     if(s && st.mParty !== 0 && !prevParty){
       const type = st.mParty===1 ? 'S' : st.mParty>=5 ? 'XL' : 'X';
       addEventToSec(s, type, st.mParty);
@@ -1532,8 +1954,17 @@ function applyServerCount(newCount){
 
   if(newCount < oldCount){
     for(let s = newCount+1; s <= oldCount; s++){
+      // Add removed server to cut history
+      const removedName  = st.names[s] || `Server ${s}`;
+      const removedScore = Math.round(secGuestScore(s));
+      st.cutHistory.push({ slot: s, name: removedName, guestCount: removedScore });
+      // Mark their seated tables amber-brown
+      Object.keys(st.tables).forEach(tid => {
+        const d = st.tables[+tid];
+        const tSec = d.coverageSec || d.sec || secOf(+tid);
+        if(tSec === s) st.tables[+tid] = {...d, cutTable: true};
+      });
       if(st.events) delete st.events[s];
-      // Keep guestTotals so they're restored if servers are added back
       st.newServers.delete(s);
       st.onBreak.delete(s);
     }
@@ -1542,7 +1973,7 @@ function applyServerCount(newCount){
       for(let s=1; s<=newCount; s++){
         if((L[newCount][s]||[]).includes(+tid)){ found=true; break; }
       }
-      if(!found) delete st.tables[tid];
+      if(!found && !st.tables[tid]?.cutTable) delete st.tables[tid];
     }
     if(st.selectedSec > newCount) st.selectedSec = null;
   } else if(newCount > oldCount){
@@ -1564,7 +1995,16 @@ function applyServerCount(newCount){
 }
 
 document.getElementById('srv-dec').addEventListener('pointerup', e=>{ e.preventDefault(); applyServerCount(st.servers - 1); });
-document.getElementById('srv-inc').addEventListener('pointerup', e=>{ e.preventDefault(); applyServerCount(st.servers + 1); });
+document.getElementById('srv-inc').addEventListener('pointerup', e=>{
+  e.preventDefault();
+  const newNum = st.servers + 1;
+  if(newNum > 11) return;
+  showNamePicker('SELECT NAME FOR NEW SERVER', (chosenName) => {
+    applyServerCount(newNum);
+    st.names[newNum] = chosenName;
+    renderAll();
+  });
+});
 document.getElementById('btn-undo').addEventListener('pointerup', ()=>{ undoState(); });
 document.getElementById('btn-redo').addEventListener('pointerup', ()=>{ redoState(); });
 
@@ -1600,11 +2040,16 @@ document.getElementById('btn-clr').addEventListener('pointerup',()=>{
     if(pwdInput.value === '2047'){
       pwdOverlay.style.display = 'none';
       st.tables={}; st.events={}; st.movedPos={}; st.links={}; st.guestTotals={};
-      st.dailyTables=0; st.dailyGuests=0; st.newServers=new Set(); st.onBreak=new Set();
+      st.dailyTables=0; st.dailyGuests=0; st.newServers=new Set(); st.onBreak=new Set(); st.cutServers=new Set(); st.cutHistory=[];
       st.selectedSec=null; st.mGroup=null;
+      st.servers = 2;
+      st.names = {1:'Server 1',2:'Server 2',3:'Server 3',4:'Server 4',5:'Server 5',
+        6:'Server 6',7:'Server 7',8:'Server 8',9:'Server 9',10:'Server 10',11:'Server 11'};
+      document.getElementById('srv-count').textContent = 2;
       localStorage.removeItem(LS_KEY);
       closeModal();
-      renderAll();
+      // Force name selection for each active section before resuming
+      pickNamesSequentially(1, 2, ()=>{ renderAll(); });
     } else {
       pwdError.style.display = 'block';
       pwdInput.value = '';
