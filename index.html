@@ -190,6 +190,9 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
 .mbtn-d{padding:12px;border-radius:9px;border:1px solid rgba(255,80,80,0.3);background:rgba(255,80,80,0.09);
   color:#ff6060;font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;}
 .mbtn-d:active{background:rgba(255,80,80,0.22);}
+.mbtn-t{padding:12px 22px;border-radius:9px;border:1px solid rgba(0,194,232,0.3);background:rgba(0,194,232,0.07);
+  color:#00C2E8;font-family:'IBM Plex Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;}
+.mbtn-t:active{background:rgba(0,194,232,0.18);}
 .mbtn-g{padding:12px;border-radius:9px;border:1px solid var(--border);background:transparent;
   color:var(--dim);font-family:'IBM Plex Sans',sans-serif;font-size:14px;cursor:pointer;}
 
@@ -311,9 +314,13 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
       ★ Replace with New Server<br>
       <span style="font-size:10px;opacity:.6;font-weight:400;">New server takes over section · starts at avg count</span>
     </button>
+    <button id="cut-opt-auto" style="padding:14px 16px;border-radius:10px;border:1px solid rgba(0,194,232,0.25);background:rgba(0,194,232,0.06);color:#00C2E8;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;text-align:left;">
+      ↓ Cut &amp; Auto-Replace<br>
+      <span id="cut-opt-auto-sub" style="font-size:10px;opacity:.6;font-weight:400;">Bottom server moves into this section</span>
+    </button>
     <button id="cut-opt-remove" style="padding:14px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;text-align:left;">
-      ↔ Replace with Existing Server<br>
-      <span style="font-size:10px;opacity:.6;font-weight:400;">Move a current server into this section · their tables recolour</span>
+      ↔ Choose Replacement<br>
+      <span style="font-size:10px;opacity:.6;font-weight:400;">Pick which server moves into this section</span>
     </button>
     <button id="cut-modal-cancel" style="padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;touch-action:manipulation;">Cancel</button>
   </div>
@@ -752,6 +759,17 @@ function showCutModal(s){
 
   document.getElementById('cut-modal-cancel').onpointerup = () => { modal.style.display='none'; };
 
+  // Show which server will auto-replace in the subtitle
+  const activeServers = Array.from({length:st.servers},(_,i)=>i+1)
+    .filter(x => x !== s && !st.cutServers.has(x));
+  const bottomSrv = activeServers[activeServers.length - 1];
+  const bottomName = bottomSrv ? (st.names[bottomSrv] || `Server ${bottomSrv}`) : null;
+  document.getElementById('cut-opt-auto-sub').textContent = bottomName
+    ? `${bottomName} moves into this section`
+    : 'No available servers to replace';
+  document.getElementById('cut-opt-auto').style.opacity = bottomSrv ? '1' : '0.35';
+  document.getElementById('cut-opt-auto').style.pointerEvents = bottomSrv ? '' : 'none';
+
   // Option 1: Replace with a new server (takes over the same slot)
   document.getElementById('cut-opt-replace').onpointerup = () => {
     modal.style.display = 'none';
@@ -779,70 +797,82 @@ function showCutModal(s){
     });
   };
 
-  // Option 2: Replace with existing server (they move into this section; their slot is removed)
+  // Option 1b: Auto-replace with bottom server
+  document.getElementById('cut-opt-auto').onpointerup = () => {
+    modal.style.display = 'none';
+    const active = Array.from({length:st.servers},(_,i)=>i+1)
+      .filter(x => x !== s && !st.cutServers.has(x));
+    const autoSec = active[active.length - 1];
+    if(!autoSec) return;
+    executeReplaceWithExisting(s, name, autoSec);
+  };
+
+  // Option 2: Choose replacement manually
   document.getElementById('cut-opt-remove').onpointerup = () => {
     modal.style.display = 'none';
     showSrvPicker(`MOVE INTO SECTION ${s}`, s, (replaceSec) => {
-      const replaceName  = st.names[replaceSec] || `Server ${replaceSec}`;
-      const replaceCount = Math.round(secGuestScore(replaceSec));
-
-      // Helper: resolve the effective section for a table record
-      function tblSec(d, tid){ return d.coverageSec != null ? +d.coverageSec : d.sec != null ? +d.sec : secOf(+tid); }
-
-      // 1 — Save cut server to history and amber its tables
-      st.cutHistory.push({ slot: s, name, guestCount: Math.round(secGuestScore(s)) });
-      Object.keys(st.tables).forEach(tid => {
-        const d = st.tables[+tid];
-        if(tblSec(d, tid) === s) st.tables[+tid] = {...d, cutTable: true};
-      });
-
-      // 2 — Recolour replaceSec's tables to section s
-      Object.keys(st.tables).forEach(tid => {
-        const d = st.tables[+tid];
-        if(d.cutTable) return;
-        if(tblSec(d, tid) === replaceSec) st.tables[+tid] = {...d, sec: s, coverageSec: s};
-      });
-
-      // 3 — Copy replaceSec's identity into slot s
-      st.names[s]       = replaceName;
-      st.guestTotals[s] = replaceCount;
-      st.newServers.delete(s);
-      st.onBreak.delete(s);
-
-      // 4 — Compact: if replaceSec is not the last slot, fill it with the last server
-      const last = st.servers;
-      if(replaceSec !== last){
-        const lastName  = st.names[last] || `Server ${last}`;
-        const lastCount = Math.round(secGuestScore(last));
-        // Recolour last server's tables to replaceSec
-        Object.keys(st.tables).forEach(tid => {
-          const d = st.tables[+tid];
-          if(d.cutTable) return;
-          if(tblSec(d, tid) === last) st.tables[+tid] = {...d, sec: replaceSec, coverageSec: replaceSec};
-        });
-        st.names[replaceSec]       = lastName;
-        st.guestTotals[replaceSec] = lastCount;
-        if(st.newServers.has(last)){ st.newServers.delete(last); st.newServers.add(replaceSec); }
-        if(st.onBreak.has(last)){   st.onBreak.delete(last);   st.onBreak.add(replaceSec); }
-        st.cutServers.delete(replaceSec); // no longer cut — it now holds the last server
-      }
-
-      // 5 — Clear and remove the last slot
-      delete st.names[last];
-      delete st.guestTotals[last];
-      st.newServers.delete(last);
-      st.onBreak.delete(last);
-      st.cutServers.delete(last);
-
-      // 6 — Decrement count
-      st.servers = Math.max(2, last - 1);
-      document.getElementById('srv-count').textContent = st.servers;
-      if(st.selectedSec === s || st.selectedSec === replaceSec || st.selectedSec === last) st.selectedSec = null;
-
-      snapshotState();
-      renderAll();
+      executeReplaceWithExisting(s, name, replaceSec);
     });
   };
+}
+
+function executeReplaceWithExisting(s, name, replaceSec){
+  function tblSec(d, tid){ return d.coverageSec != null ? +d.coverageSec : d.sec != null ? +d.sec : secOf(+tid); }
+
+  const replaceName  = st.names[replaceSec] || `Server ${replaceSec}`;
+  const replaceCount = Math.round(secGuestScore(replaceSec));
+
+  // 1 — Save cut server to history and amber its tables
+  st.cutHistory.push({ slot: s, name, guestCount: Math.round(secGuestScore(s)) });
+  Object.keys(st.tables).forEach(tid => {
+    const d = st.tables[+tid];
+    if(tblSec(d, tid) === s) st.tables[+tid] = {...d, cutTable: true};
+  });
+
+  // 2 — Recolour replaceSec's tables to section s
+  Object.keys(st.tables).forEach(tid => {
+    const d = st.tables[+tid];
+    if(d.cutTable) return;
+    if(tblSec(d, tid) === replaceSec) st.tables[+tid] = {...d, sec: s, coverageSec: s};
+  });
+
+  // 3 — Copy replaceSec's identity into slot s
+  st.names[s]       = replaceName;
+  st.guestTotals[s] = replaceCount;
+  st.newServers.delete(s);
+  st.onBreak.delete(s);
+
+  // 4 — Compact: if replaceSec is not the last slot, fill it with the last server
+  const last = st.servers;
+  if(replaceSec !== last){
+    const lastName  = st.names[last] || `Server ${last}`;
+    const lastCount = Math.round(secGuestScore(last));
+    Object.keys(st.tables).forEach(tid => {
+      const d = st.tables[+tid];
+      if(d.cutTable) return;
+      if(tblSec(d, tid) === last) st.tables[+tid] = {...d, sec: replaceSec, coverageSec: replaceSec};
+    });
+    st.names[replaceSec]       = lastName;
+    st.guestTotals[replaceSec] = lastCount;
+    if(st.newServers.has(last)){ st.newServers.delete(last); st.newServers.add(replaceSec); }
+    if(st.onBreak.has(last)){   st.onBreak.delete(last);   st.onBreak.add(replaceSec); }
+    st.cutServers.delete(replaceSec);
+  }
+
+  // 5 — Clear and remove the last slot
+  delete st.names[last];
+  delete st.guestTotals[last];
+  st.newServers.delete(last);
+  st.onBreak.delete(last);
+  st.cutServers.delete(last);
+
+  // 6 — Decrement count
+  st.servers = Math.max(2, last - 1);
+  document.getElementById('srv-count').textContent = st.servers;
+  if(st.selectedSec === s || st.selectedSec === replaceSec || st.selectedSec === last) st.selectedSec = null;
+
+  snapshotState();
+  renderAll();
 }
 
 // ── ROTATION RENDER
@@ -1410,23 +1440,30 @@ function getLinkedGroup(id){
   while(queue.length){ const cur=queue.shift(); for(const n of (st.links[cur]||[])){ if(!visited.has(n)){visited.add(n);queue.push(n);} } }
   return visited;
 }
-function snapDrop(dragId, dropL, dropT){
+function snapDrop(dragId, dropL, dropT, hOnly){
   const dragPos = T[dragId]; if(!dragPos) return {l:dropL,t:dropT,linkId:null};
-  const SNAP = 14; let best=null, bestDist=Infinity;
+  const SNAP = hOnly ? 18 : 14; let best=null, bestDist=Infinity;
   const dragCX = dropL+dragPos.w/2, dragCY = dropT+dragPos.h/2;
   const BOOTH_SHAPES = new Set(['booth','booth-h','booth-top2','booth-top1','booth-bot2','corner-booth','corner-booth-ccw']);
+  const HONLY_IDS = new Set([11,12,13,14,15]);
   for(const [idStr,pos] of Object.entries(T)){
     const tid=+idStr; if(tid===dragId) continue;
-    if(BOOTH_SHAPES.has(pos.s)) continue; // booths cannot be linked to
+    // hOnly tables only snap to other hOnly tables; all other tables skip booths
+    if(hOnly){
+      if(!HONLY_IDS.has(tid)) continue;
+    } else {
+      if(BOOTH_SHAPES.has(pos.s)) continue;
+    }
     const tl = st.movedPos[tid]?.l??pos.l, tt = st.movedPos[tid]?.t??pos.t;
     const cx=tl+pos.w/2, cy=tt+pos.h/2;
-    const dist=Math.hypot(cx-dragCX,cy-dragCY);
+    // For hOnly tables ignore vertical distance — only horizontal proximity matters
+    const dist = hOnly ? Math.abs(cx-dragCX) : Math.hypot(cx-dragCX,cy-dragCY);
     if(dist<SNAP&&dist<bestDist){bestDist=dist;best={id:tid,l:tl,t:tt,w:pos.w,h:pos.h};}
   }
   if(!best) return {l:dropL,t:dropT,linkId:null};
   const dx=dragCX-best.l-best.w/2, dy=dragCY-best.t-best.h/2;
-  // Only snap horizontally (left/right), not vertically
-  if(Math.abs(dx) <= Math.abs(dy)) return {l:dropL,t:dropT,linkId:null};
+  // For hOnly tables always snap horizontally; for others require horizontal to dominate
+  if(!hOnly && Math.abs(dx) <= Math.abs(dy)) return {l:dropL,t:dropT,linkId:null};
   const sl = dx>0 ? best.l+best.w+0.3 : best.l-dragPos.w-0.3;
   const st2 = best.t+(best.h-dragPos.h)/2;
   return {l:sl,t:st2,linkId:best.id};
@@ -1513,7 +1550,7 @@ function addTableEvents(el, id, onTap){
       const clampL=Math.max(0,Math.min(100-pos.w,rawL));
       const clampT=hOnly ? pos.t : Math.max(0,Math.min(100-pos.h,rawT));
       unlinkTable(id);
-      const {l,t,linkId}=snapDrop(id,clampL,clampT);
+      const {l,t,linkId}=snapDrop(id,clampL,clampT,hOnly);
       const actuallyMoved = Math.abs(l-(T[id].l))>0.5 || Math.abs(t-(T[id].t))>0.5;
       if(actuallyMoved) st.movedPos[id]={l,t};
       else delete st.movedPos[id];
@@ -1599,6 +1636,7 @@ function openStoolModal(id, sec){
   const btns = document.getElementById('mbtns');
   if(seated){
     btns.innerHTML=`<button class="mbtn-p" id="mb-go" style="background:${c.bg};color:${c.tx}">Update</button>
+      <button class="mbtn-t" id="mb-tr">Transfer</button>
       <button class="mbtn-d" id="mb-cl">Clean</button><button class="mbtn-g" id="mb-cx">✕</button>`;
   } else {
     btns.innerHTML=`<button class="mbtn-p" id="mb-go" style="background:${c.bg};color:${c.tx}" disabled>Seat</button>
@@ -1607,7 +1645,12 @@ function openStoolModal(id, sec){
   document.getElementById('mb-go').addEventListener('pointerup', doSeat);
   document.getElementById('mb-cx').addEventListener('pointerup', closeModal);
   const clr=document.getElementById('mb-cl'); if(clr) clr.addEventListener('pointerup', doClear);
-  document.getElementById('overlay').classList.add('open');
+  const tr=document.getElementById('mb-tr');
+  if(tr) tr.addEventListener('pointerup', ()=>{
+    const savedGroup = new Set(st.mGroup || [st.mTable]);
+    closeModal();
+    doTransfer(savedGroup);
+  });
 }
 
 function openRotModal(){
@@ -1753,6 +1796,7 @@ function openModal(id){
   const hasMoved = [...group].some(gid => st.movedPos[gid]);
   if(anySeated){
     btns.innerHTML=`<button class="mbtn-p" id="mb-go" style="background:${c.bg};color:${c.tx}">Update</button>
+      <button class="mbtn-t" id="mb-tr">Transfer</button>
       <button class="mbtn-d" id="mb-cl">Clean</button>
       ${hasMoved?`<button class="mbtn-g" id="mb-ret" style="font-size:11px;">↩</button>`:''}
       <button class="mbtn-g" id="mb-cx">✕</button>`;
@@ -1764,6 +1808,11 @@ function openModal(id){
   document.getElementById('mb-go').addEventListener('pointerup', doSeat);
   document.getElementById('mb-cx').addEventListener('pointerup', closeModal);
   const clr=document.getElementById('mb-cl'); if(clr) clr.addEventListener('pointerup', doClear);
+  const tr=document.getElementById('mb-tr'); if(tr) tr.addEventListener('pointerup', ()=>{
+    const savedGroup = new Set([st.mTable]);
+    closeModal();
+    doTransfer(savedGroup);
+  });
   const ret=document.getElementById('mb-ret');
   if(ret) ret.addEventListener('pointerup', ()=>{
     for(const gid of group){ delete st.movedPos[gid]; unlinkTable(gid); }
@@ -1894,6 +1943,38 @@ function doSeat(){
   closeModal();
 }
 
+function doTransfer(group){
+  group = group || st.mGroup || new Set([st.mTable]);
+  const currentSec = (() => {
+    for(const gid of group){
+      const d = st.tables[gid];
+      if(d) return d.coverageSec != null ? +d.coverageSec : d.sec != null ? +d.sec : secOf(gid);
+    }
+    return secOf([...group][0]);
+  })();
+  showSrvPicker('TRANSFER TABLE TO', currentSec, (newSec) => {
+    // Work out the party size for this group
+    let partySize = 0;
+    for(const gid of group){
+      const d = st.tables[gid];
+      if(d && d.party && d.party > partySize) partySize = d.party;
+    }
+    // Deduct from old server, add to new server
+    if(currentSec && partySize > 0){
+      st.guestTotals[currentSec] = Math.max(0, (st.guestTotals[currentSec] || 0) - partySize);
+      st.guestTotals[newSec]     = (st.guestTotals[newSec] || 0) + partySize;
+    }
+    // Reassign table records — colour follows sec/coverageSec automatically
+    for(const gid of group){
+      const d = st.tables[gid];
+      if(!d) continue;
+      st.tables[gid] = {...d, sec: newSec, coverageSec: newSec};
+    }
+    snapshotState();
+    renderAll();
+  });
+}
+
 function doClear(){
   const group = st.mGroup || new Set([st.mTable]);
   for(const gid of group){
@@ -1996,7 +2077,6 @@ function applyServerCount(newCount){
       for(let x=1; x<=oldCount; x++) totalGuests += secGuestScore(x);
       st.guestTotals[s] = oldCount > 0 ? Math.round(totalGuests / oldCount) : 0;
       if(st.events && !st.events[s]) st.events[s] = [];
-      st.newServers.add(s);
       // Clear any leftover cut state for this slot
       st.cutServers.delete(s);
       st.onBreak.delete(s);
