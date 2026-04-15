@@ -63,8 +63,7 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
 .tbl.round{border-radius:50%;}.tbl.special{border-radius:50%;}.tbl.rect{border-radius:5px;}.tbl.booth{border-radius:6px;}
 .tbl.empty{opacity:.36;}.tbl.seated{opacity:1;box-shadow:0 0 0 2.5px rgba(255,255,255,0.3);}
 .tbl.pressing{opacity:.6;}
-.tbl-n{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;line-height:1;opacity:.8;}
-.tbl-p{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:700;line-height:1;}
+.tbl-n{font-family:'IBM Plex Mono',monospace;font-size:clamp(9px,3.5vw,20px);font-weight:700;line-height:1;}
 .stl{position:absolute;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;
   font-family:'IBM Plex Mono',monospace;border:1.5px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.05);
   color:rgba(255,255,255,0.3);}
@@ -1340,13 +1339,9 @@ function renderFloor(){
       const tbl = document.createElement('div');
       tbl.style.cssText = `flex:1;background:${tableColor};border-radius:3px;border:1.5px solid rgba(0,0,0,0.3);
         display:flex;flex-direction:column;align-items:center;justify-content:center;`;
-      const partySpan = document.createElement('span');
-      partySpan.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:${c.tx};line-height:1;`;
-      partySpan.textContent = seated && d.party ? d.party : '';
       const numSpan = document.createElement('span');
-      numSpan.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;color:${c.tx};opacity:.8;line-height:1;`;
+      numSpan.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:clamp(10px,2vw,22px);font-weight:700;color:${c.tx};line-height:1;`;
       numSpan.textContent = id;
-      tbl.appendChild(partySpan);
       tbl.appendChild(numSpan);
 
       if(pos.s === 'booth')      { wrap.appendChild(mkBench(4,2));    wrap.appendChild(tbl); wrap.appendChild(mkBench(2,4)); }
@@ -1375,8 +1370,7 @@ function renderFloor(){
         const tblSurf   = document.createElement('div');
         tblSurf.style.cssText   = `position:absolute;top:26%;left:26%;right:0;bottom:0;background:${tableColor};border-radius:3px;border:1.5px solid rgba(0,0,0,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;`;
         wrap.appendChild(benchTop); wrap.appendChild(benchLeft); wrap.appendChild(tblSurf);
-        const p=document.createElement('span'); p.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;color:${c.tx};line-height:1;`; p.textContent=seated&&d.party?d.party:''; tblSurf.appendChild(p);
-        const n=document.createElement('span'); n.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:${c.tx};opacity:.8;line-height:1;`; n.textContent=id; tblSurf.appendChild(n);
+        const n=document.createElement('span'); n.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:clamp(10px,2vw,22px);font-weight:700;color:${c.tx};line-height:1;`; n.textContent=id; tblSurf.appendChild(n);
       } else {
         // corner-booth-ccw: bench bottom + bench left, table top-right
         const benchBot  = document.createElement('div');
@@ -1386,8 +1380,7 @@ function renderFloor(){
         const tblSurf   = document.createElement('div');
         tblSurf.style.cssText   = `position:absolute;top:0;left:26%;right:0;bottom:26%;background:${tableColor};border-radius:3px;border:1.5px solid rgba(0,0,0,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;`;
         wrap.appendChild(benchBot); wrap.appendChild(benchLeft); wrap.appendChild(tblSurf);
-        const p=document.createElement('span'); p.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;color:${c.tx};line-height:1;`; p.textContent=seated&&d.party?d.party:''; tblSurf.appendChild(p);
-        const n=document.createElement('span'); n.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:${c.tx};opacity:.8;line-height:1;`; n.textContent=id; tblSurf.appendChild(n);
+        const n=document.createElement('span'); n.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:clamp(10px,2vw,22px);font-weight:700;color:${c.tx};line-height:1;`; n.textContent=id; tblSurf.appendChild(n);
       }
 
       addTableEvents(wrap, id, ()=>openModal(id));
@@ -1416,13 +1409,9 @@ function renderFloor(){
       tableEl.style.cssText = `width:${chairs===2?'95%':'80%'};flex:1;margin:4% 0;background:${c.bg};border-radius:4px;
         border:2px solid rgba(0,0,0,0.25);
         display:flex;flex-direction:column;align-items:center;justify-content:center;`;
-      const partySpan = document.createElement('span');
-      partySpan.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:${c.tx};line-height:1;`;
-      partySpan.textContent = seated && d.party ? d.party : '';
       const numSpan = document.createElement('span');
-      numSpan.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;color:${c.tx};opacity:.8;line-height:1;`;
+      numSpan.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:clamp(10px,2vw,22px);font-weight:700;color:${c.tx};line-height:1;`;
       numSpan.textContent = id;
-      tableEl.appendChild(partySpan);
       tableEl.appendChild(numSpan);
 
       wrap.appendChild(chairRow());
@@ -1436,8 +1425,7 @@ function renderFloor(){
       el.className=`tbl ${pos.s} ${seated?'seated':'empty'}`;
       el.style.cssText=`left:${rpos.l}%;top:${rpos.t}%;width:${rpos.w}%;height:${rpos.h}%;background:${c.bg};color:${c.tx};`;
       if(seated){
-        const label = d.party === 0 ? '' : `<span class="tbl-p">${d.party}</span>`;
-        el.innerHTML=`${label}<span class="tbl-n">${id}</span>`;
+        el.innerHTML=`<span class="tbl-n">${id}</span>`;
       } else {
         el.innerHTML=`<span class="tbl-n">${id}</span>`;
       }
@@ -1707,6 +1695,7 @@ function openStoolModal(id, sec){
     closeModal();
     doTransfer(savedGroup);
   });
+  document.getElementById('overlay').classList.add('open');
 }
 
 function openRotModal(){
