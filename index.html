@@ -306,6 +306,22 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
   </div>
 </div>
 
+<!-- BREAK TYPE PICKER -->
+<div id="break-type-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:700;align-items:center;justify-content:center;">
+  <div style="background:#17171f;border:1px solid rgba(255,255,255,0.11);border-radius:14px;padding:22px;width:min(300px,92vw);display:flex;flex-direction:column;gap:10px;">
+    <div id="break-type-title" style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:#FFA500;letter-spacing:.5px;"></div>
+    <button id="break-opt-meal" style="padding:14px 16px;border-radius:10px;border:1px solid rgba(255,165,0,0.3);background:rgba(255,165,0,0.07);color:#FFA500;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;text-align:left;">
+      🍽 Meal Break<br>
+      <span style="font-size:10px;opacity:.6;font-weight:400;">~30 minutes · removed from rotation</span>
+    </button>
+    <button id="break-opt-coffee" style="padding:14px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;text-align:left;">
+      ☕ Coffee Break<br>
+      <span style="font-size:10px;opacity:.6;font-weight:400;">~10 minutes · removed from rotation</span>
+    </button>
+    <button id="break-type-cancel" style="padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;touch-action:manipulation;">Cancel</button>
+  </div>
+</div>
+
 <!-- CUT SERVER MODAL -->
 <div id="cut-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:700;align-items:center;justify-content:center;">
   <div style="background:#17171f;border:1px solid rgba(255,255,255,0.11);border-radius:14px;padding:22px;width:min(320px,92vw);display:flex;flex-direction:column;gap:10px;">
@@ -456,6 +472,7 @@ const st = {
   dailyGuests:0,       // total guests seated today
   newServers: new Set(),
   onBreak: new Set(),
+  breakType: {},       // {serverNum: 'meal'|'coffee'}
   cutServers: new Set(),   // servers cut without replacement (slot excluded from rotation)
   cutHistory: [],          // [{slot, name, guestCount}] — servers replaced in-place
   selectedSec: null,
@@ -484,6 +501,7 @@ function stateToObj(){
     dailyGuests: st.dailyGuests,
     newServers:  [...st.newServers],
     onBreak:     [...st.onBreak],
+    breakType:   st.breakType,
     cutServers:  [...st.cutServers],
     cutHistory:  st.cutHistory,
     selectedSec: st.selectedSec ?? null,
@@ -542,6 +560,7 @@ function deserializeState(data){
   st.dailyGuests = data.dailyGuests ?? 0;
   st.newServers  = new Set(data.newServers ?? []);
   st.onBreak     = new Set(data.onBreak    ?? []);
+  st.breakType   = data.breakType ?? {};
   st.cutServers  = new Set(data.cutServers ?? []);
   st.cutHistory  = data.cutHistory ?? [];
   st.selectedSec = data.selectedSec ?? null;
@@ -892,6 +911,8 @@ function renderRot(){
     const name   = st.names[s]||`Server ${s}`;
 
     const isOnBreak = st.onBreak.has(s);
+    const breakT    = st.breakType[s];
+    const breakIcon = isOnBreak ? (breakT === 'meal' ? '🍽' : '☕') : '☕';
     const row = document.createElement('div');
     row.className = 'sec-row' + (isNext?' next-up':'') + (isSel?' selected':'') + (isOnBreak?' on-break':'');
     rowEls[s] = row;
@@ -909,7 +930,7 @@ function renderRot(){
     const nameCol = document.createElement('div');
     nameCol.className = 'sec-name-col';
     if(isSel){ const sl=document.createElement('div');sl.className='sel-lbl';sl.textContent='● SELECTED';nameCol.appendChild(sl); }
-    else if(isOnBreak){ const bl=document.createElement('div');bl.className='next-lbl';bl.style.cssText='color:#FFA500;font-size:9px;letter-spacing:.5px;';bl.textContent='☕ ON BREAK';nameCol.appendChild(bl); }
+    else if(isOnBreak){ const bl=document.createElement('div');bl.className='next-lbl';bl.style.cssText='color:#FFA500;font-size:9px;letter-spacing:.5px;';bl.textContent=`${breakT==='meal'?'🍽':'☕'} ${breakT==='meal'?'MEAL':'COFFEE'} BREAK`;nameCol.appendChild(bl); }
     else if(st.newServers.has(s)){ const nl=document.createElement('div');nl.className='next-lbl';nl.textContent='★ NEW · NEXT UP';nameCol.appendChild(nl); }
     else if(isNext){ const nl=document.createElement('div');nl.className='next-lbl';nl.textContent='NEXT UP';nameCol.appendChild(nl); }
     const ni = document.createElement('div');
@@ -954,27 +975,44 @@ function renderRot(){
     rowBot.appendChild(btnPlus);
 
     const btnBreak = document.createElement('button');
-    btnBreak.textContent = '☕';
+    btnBreak.textContent = breakIcon;
     btnBreak.className = 'break-btn' + (isOnBreak ? ' active' : '');
     btnBreak.title = isOnBreak ? 'End break' : 'Mark on break';
     btnBreak.addEventListener('pointerup', ev => {
       ev.stopPropagation();
       const name = st.names[s] || `Server ${s}`;
-      const isBreak = st.onBreak.has(s);
-      const msg = isBreak ? `Return ${name} from break?` : `Put ${name} on break?`;
-      showConfirm(msg, ()=>{
-        if(isBreak){
+      if(st.onBreak.has(s)){
+        // Already on break — confirm return
+        showConfirm(`Return ${name} from break?`, ()=>{
+          const type = st.breakType[s];
           st.onBreak.delete(s);
-          const activeSecs = Array.from({length:st.servers},(_,i)=>i+1).filter(x=>!st.onBreak.has(x) && x!==s);
-          if(activeSecs.length > 0){
-            const avg = activeSecs.reduce((sum,x)=>sum+(st.guestTotals[x]||0),0) / activeSecs.length;
-            st.guestTotals[s] = Math.round(avg);
+          delete st.breakType[s];
+          if(type === 'meal'){
+            // Meal break: reset to average of active servers
+            const activeSecs = Array.from({length:st.servers},(_,i)=>i+1).filter(x=>!st.onBreak.has(x) && !st.cutServers.has(x) && x!==s);
+            if(activeSecs.length > 0){
+              const avg = activeSecs.reduce((sum,x)=>sum+(st.guestTotals[x]||0),0) / activeSecs.length;
+              st.guestTotals[s] = Math.round(avg);
+            }
           }
-        } else {
+          // Coffee break: guest count unchanged
+          snapshotState(); renderRot();
+        });
+      } else {
+        // Pick break type
+        const modal = document.getElementById('break-type-modal');
+        document.getElementById('break-type-title').textContent = `Break type for ${name}`;
+        modal.style.display = 'flex';
+        const doBreak = (type) => {
+          modal.style.display = 'none';
           st.onBreak.add(s);
-        }
-        renderRot();
-      });
+          st.breakType[s] = type;
+          snapshotState(); renderRot();
+        };
+        document.getElementById('break-opt-meal').onpointerup   = () => doBreak('meal');
+        document.getElementById('break-opt-coffee').onpointerup = () => doBreak('coffee');
+        document.getElementById('break-type-cancel').onpointerup = () => { modal.style.display = 'none'; };
+      }
     });
     rowBot.appendChild(btnBreak);
 
@@ -1118,6 +1156,22 @@ function renderRot(){
   renderBanner();
 }
 
+// Add +1 to a coffee break server only if they have the lowest guest count
+function tickCoffeeBreakServers(){
+  // Find the server with the lowest score (including coffee break servers, excluding meal break & cut)
+  let minScore = Infinity, minSrv = null;
+  for(let i = 1; i <= st.servers; i++){
+    if(st.cutServers.has(i)) continue;
+    if(st.onBreak.has(i) && st.breakType[i] === 'meal') continue;
+    const sc = secGuestScore(i);
+    if(sc < minScore){ minScore = sc; minSrv = i; }
+  }
+  // If that lowest server is on a coffee break, give them +1
+  if(minSrv && st.onBreak.has(minSrv) && st.breakType[minSrv] === 'coffee'){
+    st.guestTotals[minSrv] = (st.guestTotals[minSrv] || 0) + 1;
+  }
+}
+
 // Log an event to the active target (selected or next-up)
 function addEvent(type, guests){
   const s = activeTarget();
@@ -1129,6 +1183,7 @@ function addEvent(type, guests){
   st.dailyTables++;
   st.newServers.delete(s);
   st.selectedSec = null;
+  tickCoffeeBreakServers();
   snapshotState();
   renderRot();
 }
@@ -1142,6 +1197,7 @@ function addEventToSec(sec, type, guests){
   if(type !== 'D'){ st.dailyGuests += g; }
   st.dailyTables++;
   st.newServers.delete(sec);
+  tickCoffeeBreakServers();
   renderRot();
   const row = rowEls[sec];
   if(row){
@@ -2143,7 +2199,7 @@ document.getElementById('btn-clr').addEventListener('pointerup',()=>{
     if(pwdInput.value === '2047'){
       pwdOverlay.style.display = 'none';
       st.tables={}; st.events={}; st.movedPos={}; st.links={}; st.guestTotals={};
-      st.dailyTables=0; st.dailyGuests=0; st.newServers=new Set(); st.onBreak=new Set(); st.cutServers=new Set(); st.cutHistory=[];
+      st.dailyTables=0; st.dailyGuests=0; st.newServers=new Set(); st.onBreak=new Set(); st.breakType={}; st.cutServers=new Set(); st.cutHistory=[];
       st.selectedSec=null; st.mGroup=null;
       st.servers = 2;
       st.names = {1:'Server 1',2:'Server 2',3:'Server 3',4:'Server 4',5:'Server 5',
