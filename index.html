@@ -287,6 +287,15 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
   </div>
 </div>
 
+<!-- TIME PICKER (shift end time) -->
+<div id="time-picker" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10001;align-items:center;justify-content:center;">
+  <div style="background:#17171f;border:1px solid rgba(255,255,255,0.11);border-radius:14px;padding:20px;width:min(380px,96vw);display:flex;flex-direction:column;gap:10px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:#FFD700;letter-spacing:1px;" id="time-picker-title">SHIFT END TIME</div>
+    <div id="time-picker-list" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:52vh;overflow-y:auto;-webkit-overflow-scrolling:touch;"></div>
+    <button id="time-picker-skip" style="padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;touch-action:manipulation;">Skip</button>
+  </div>
+</div>
+
 <!-- SERVER PICKER (for existing-server replacement) -->
 <div id="srv-picker" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10001;align-items:center;justify-content:center;">
   <div style="background:#17171f;border:1px solid rgba(255,255,255,0.11);border-radius:14px;padding:20px;width:min(320px,92vw);display:flex;flex-direction:column;gap:8px;">
@@ -371,7 +380,7 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
       <button id="pwd-cancel" style="flex:1;padding:12px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);
         color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;cursor:pointer;">Cancel</button>
       <button id="pwd-confirm" style="flex:1;padding:12px;border-radius:9px;border:none;background:rgba(255,80,80,0.2);
-        color:#ff6060;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;cursor:pointer;border:1.5px solid rgba(255,80,80,0.4);">Clear All</button>
+        color:#ff6060;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;cursor:pointer;border:1.5px solid rgba(255,80,80,0.4);">Confirm</button>
     </div>
   </div>
 </div>
@@ -481,6 +490,7 @@ const st = {
   breakType: {},       // {serverNum: 'meal'|'coffee'}
   cutServers: new Set(),   // servers cut without replacement (slot excluded from rotation)
   cutHistory: [],          // [{slot, name, guestCount}] — servers replaced in-place
+  endTimes:   {},          // {serverNum: 'HH:MM'} — shift end time per server
   selectedSec: null,
   rotMode: false,
   mTable:null, mParty:null, mGroup:null, mMultiSec:null, mMultiStep:0, mOverrideSec:null,
@@ -510,6 +520,7 @@ function stateToObj(){
     breakType:   st.breakType,
     cutServers:  [...st.cutServers],
     cutHistory:  st.cutHistory,
+    endTimes:    st.endTimes,
     selectedSec: st.selectedSec ?? null,
     nameList:    SERVER_NAME_LIST
   };
@@ -569,6 +580,7 @@ function deserializeState(data){
   st.breakType   = data.breakType ?? {};
   st.cutServers  = new Set(data.cutServers ?? []);
   st.cutHistory  = data.cutHistory ?? [];
+  st.endTimes    = data.endTimes   ?? {};
   st.selectedSec = data.selectedSec ?? null;
   if(data.nameList && Array.isArray(data.nameList) && data.nameList.length > 0){
     SERVER_NAME_LIST = data.nameList;
@@ -681,6 +693,7 @@ function showNamePicker(title, onPick, forceMode){
     const pwdError   = document.getElementById('pwd-error');
     pwdInput.value = '';
     pwdError.style.display = 'none';
+    document.getElementById('pwd-confirm').textContent = 'Remove';
     pwdOverlay.style.display = 'flex';
     setTimeout(()=>pwdInput.focus(), 100);
     document.getElementById('pwd-confirm').onpointerup = () => {
@@ -738,14 +751,62 @@ function pickNamesSequentially(current, total, onDone){
     `SELECT NAME FOR SERVER ${current} of ${total}`,
     (name) => {
       st.names[current] = name;
-      if(current < total) pickNamesSequentially(current + 1, total, onDone);
-      else onDone();
+      showTimePicker(name, (endTime) => {
+        if(endTime) st.endTimes[current] = endTime;
+        if(current < total) pickNamesSequentially(current + 1, total, onDone);
+        else onDone();
+      });
     },
-    true // forceMode — hides Cancel so selection is mandatory
+    true
   );
 }
 
-// Server picker — shows active servers (excluding `excludeSec`) to choose from
+// ── TIME PICKER (shift end time)
+function showTimePicker(serverName, onPick){
+  const overlay = document.getElementById('time-picker');
+  const list    = document.getElementById('time-picker-list');
+  document.getElementById('time-picker-title').textContent = `END TIME — ${serverName.toUpperCase()}`;
+  list.innerHTML = '';
+
+  // Build 15-min slots starting from the current hour's :00 so :00 always lands in column 1
+  const now  = new Date();
+  const base = new Date(now);
+  base.setMinutes(0, 0, 0); // snap to hour start
+
+  const slots = [];
+  for(let i = 0; i < 48; i++){   // 48 slots = 12 hours
+    const d = new Date(base.getTime() + i * 15 * 60 * 1000);
+    slots.push(d);
+  }
+
+  slots.forEach(d => {
+    const h   = d.getHours();
+    const m   = d.getMinutes();
+    const hh  = h % 12 || 12;
+    const mm  = String(m).padStart(2, '0');
+    const ap  = h < 12 ? 'AM' : 'PM';
+    const lbl = `${hh}:${mm}${ap}`;
+    const val = `${String(h).padStart(2,'0')}:${mm}`;
+
+    const btn = document.createElement('button');
+    btn.textContent = lbl;
+    btn.style.cssText = `width:100%;padding:12px 4px;border-radius:8px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.06);color:var(--text);`;
+    btn.addEventListener('pointerup', () => {
+      overlay.style.display = 'none';
+      onPick(val);
+    });
+    list.appendChild(btn);
+  });
+
+  document.getElementById('time-picker-skip').onpointerup = () => {
+    overlay.style.display = 'none';
+    onPick(null);
+  };
+
+  overlay.style.display = 'flex';
+}
+
+// ── SERVER PICKER (for existing-server replacement)
 function showSrvPicker(title, excludeSec, onPick){
   const overlay = document.getElementById('srv-picker');
   const list    = document.getElementById('srv-picker-list');
@@ -795,6 +856,7 @@ function showCutModal(s){
   document.getElementById('cut-opt-replace').onpointerup = () => {
     modal.style.display = 'none';
     showNamePicker(`NAME FOR REPLACEMENT IN SECTION ${s}`, (chosenName) => {
+      showTimePicker(chosenName, (endTime) => {
       // Save old server's identity to cut history
       st.cutHistory.push({ slot: s, name, guestCount: Math.round(secGuestScore(s)) });
       // Mark existing seated tables as cut, stamping the original server's name
@@ -805,6 +867,7 @@ function showCutModal(s){
       });
       // Rename slot to new server
       st.names[s] = chosenName;
+      if(endTime) st.endTimes[s] = endTime; else delete st.endTimes[s];
       // New server starts at average of active peers
       const active = Array.from({length:st.servers},(_,i)=>i+1)
         .filter(x => !st.cutServers.has(x) && !st.onBreak.has(x) && x !== s);
@@ -815,6 +878,7 @@ function showCutModal(s){
       if(st.selectedSec === s) st.selectedSec = null;
       snapshotState();
       renderAll();
+      }); // end showTimePicker
     });
   };
 
@@ -875,6 +939,7 @@ function executeReplaceWithExisting(s, name, replaceSec){
     });
     st.names[replaceSec]       = lastName;
     st.guestTotals[replaceSec] = lastCount;
+    st.endTimes[replaceSec]    = st.endTimes[last]; if(!st.endTimes[replaceSec]) delete st.endTimes[replaceSec];
     if(st.newServers.has(last)){ st.newServers.delete(last); st.newServers.add(replaceSec); }
     if(st.onBreak.has(last)){   st.onBreak.delete(last);   st.onBreak.add(replaceSec); }
     st.cutServers.delete(replaceSec);
@@ -883,6 +948,7 @@ function executeReplaceWithExisting(s, name, replaceSec){
   // 5 — Clear and remove the last slot
   delete st.names[last];
   delete st.guestTotals[last];
+  delete st.endTimes[last];
   st.newServers.delete(last);
   st.onBreak.delete(last);
   st.cutServers.delete(last);
@@ -934,9 +1000,13 @@ function renderRot(){
     else if(isFull){ const fl=document.createElement('div');fl.className='next-lbl';fl.style.cssText='color:#aaa;font-size:9px;letter-spacing:.5px;';fl.textContent='⬛ FULL — AUTO SKIP';nameCol.appendChild(fl); }
     else if(st.newServers.has(s)){ const nl=document.createElement('div');nl.className='next-lbl';nl.textContent='★ NEW · NEXT UP';nameCol.appendChild(nl); }
     else if(isNext){ const nl=document.createElement('div');nl.className='next-lbl';nl.textContent='NEXT UP';nameCol.appendChild(nl); }
+
+    // Name + end-time chip on the same line
+    const nameRow = document.createElement('div');
+    nameRow.style.cssText = 'display:flex;align-items:center;gap:6px;min-width:0;';
     const ni = document.createElement('div');
     ni.className='sec-name-inp';
-    ni.style.cssText='cursor:pointer;border-bottom:1px dashed rgba(255,255,255,0.18);';
+    ni.style.cssText='cursor:pointer;border-bottom:1px dashed rgba(255,255,255,0.18);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
     ni.textContent = name;
     ni.title = 'Tap to change name';
     ni.addEventListener('pointerup', e => {
@@ -947,7 +1017,20 @@ function renderRot(){
         renderAll();
       });
     });
-    nameCol.appendChild(ni);
+    nameRow.appendChild(ni);
+
+    const endT = st.endTimes[s];
+    if(endT){
+      const [eh, em] = endT.split(':').map(Number);
+      const hh = eh % 12 || 12, ap = eh < 12 ? 'a' : 'p';
+      const chip = document.createElement('span');
+      chip.textContent = `${hh}:${String(em).padStart(2,'0')}${ap}`;
+      chip.style.cssText = 'flex-shrink:0;font-family:\'IBM Plex Mono\',monospace;font-size:10px;font-weight:700;color:#ddd;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.32);border-radius:4px;padding:2px 7px;letter-spacing:.3px;white-space:nowrap;';
+      chip.title = 'Shift end time';
+      nameRow.appendChild(chip);
+    }
+
+    nameCol.appendChild(nameRow);
     rowTop.appendChild(badge);
     rowTop.appendChild(nameCol);
 
@@ -2166,9 +2249,12 @@ document.getElementById('srv-inc').addEventListener('pointerup', e=>{
   const newNum = st.servers + 1;
   if(newNum > 11) return;
   showNamePicker('SELECT NAME FOR NEW SERVER', (chosenName) => {
-    applyServerCount(newNum);
-    st.names[newNum] = chosenName;
-    renderAll();
+    showTimePicker(chosenName, (endTime) => {
+      applyServerCount(newNum);
+      st.names[newNum] = chosenName;
+      if(endTime) st.endTimes[newNum] = endTime;
+      renderAll();
+    });
   });
 });
 document.getElementById('btn-undo').addEventListener('pointerup', ()=>{ undoState(); });
@@ -2206,6 +2292,7 @@ document.getElementById('clear-opt-all').addEventListener('pointerup',()=>{
   const pwdError   = document.getElementById('pwd-error');
   pwdInput.value = '';
   pwdError.style.display = 'none';
+  document.getElementById('pwd-confirm').textContent = 'Clear All';
   pwdOverlay.style.display = 'flex';
   setTimeout(()=>pwdInput.focus(), 100);
   document.getElementById('pwd-cancel').onpointerup = ()=>{ pwdOverlay.style.display = 'none'; };
