@@ -797,11 +797,11 @@ function showCutModal(s){
     showNamePicker(`NAME FOR REPLACEMENT IN SECTION ${s}`, (chosenName) => {
       // Save old server's identity to cut history
       st.cutHistory.push({ slot: s, name, guestCount: Math.round(secGuestScore(s)) });
-      // Mark existing seated tables as cut
+      // Mark existing seated tables as cut, stamping the original server's name
       Object.keys(st.tables).forEach(tid => {
         const d = st.tables[+tid];
         const tSec = d.coverageSec || d.sec || secOf(+tid);
-        if(tSec === s) st.tables[+tid] = {...d, cutTable: true};
+        if(tSec === s) st.tables[+tid] = {...d, cutTable: true, seatedByName: name};
       });
       // Rename slot to new server
       st.names[s] = chosenName;
@@ -847,7 +847,7 @@ function executeReplaceWithExisting(s, name, replaceSec){
   st.cutHistory.push({ slot: s, name, guestCount: Math.round(secGuestScore(s)) });
   Object.keys(st.tables).forEach(tid => {
     const d = st.tables[+tid];
-    if(tblSec(d, tid) === s) st.tables[+tid] = {...d, cutTable: true};
+    if(tblSec(d, tid) === s) st.tables[+tid] = {...d, cutTable: true, seatedByName: name};
   });
 
   // 2 — Recolour replaceSec's tables to section s
@@ -1844,7 +1844,9 @@ function openModal(id){
   const badge=document.getElementById('m-badge');
   badge.textContent=`§${s}`;
   badge.style.cssText=`background:${c.bg};color:${c.tx};font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;`;
-  document.getElementById('m-srv').textContent=st.names[s]||`Server ${s}`;
+  const tableData = st.tables[id];
+  const displayName = (tableData?.seatedByName) || st.names[s] || `Server ${s}`;
+  document.getElementById('m-srv').textContent = displayName;
   document.querySelectorAll('.pb').forEach(b=>b.classList.toggle('on', +b.dataset.n === st.mParty && st.mParty !== null));
   const btns=document.getElementById('mbtns');
   const hasMoved = [...group].some(gid => st.movedPos[gid]);
@@ -2109,7 +2111,7 @@ function applyServerCount(newCount){
       Object.keys(st.tables).forEach(tid => {
         const d = st.tables[+tid];
         const tSec = d.coverageSec || d.sec || secOf(+tid);
-        if(tSec === s) st.tables[+tid] = {...d, cutTable: true};
+        if(tSec === s) st.tables[+tid] = {...d, cutTable: true, seatedByName: removedName};
       });
       if(st.events) delete st.events[s];
       st.newServers.delete(s);
@@ -2955,7 +2957,7 @@ hr {
       <div class="step-num">1</div>
       <div class="step-body">
         <strong>Next Up is automatic</strong>
-        <p>The server with the fewest guests is always highlighted. You don't need to track this manually.</p>
+        <p>The server with the fewest guests is always highlighted as Next Up. You don't need to track this manually.</p>
       </div>
     </div>
     <div class="step">
@@ -2972,17 +2974,6 @@ hr {
         <p>Use the <span class="pill grey">−</span> and <span class="pill grey">+</span> buttons beside each server's score to fix any errors.</p>
       </div>
     </div>
-    <div class="step">
-      <div class="step-num">4</div>
-      <div class="step-body">
-        <strong>Select a server manually</strong>
-        <p>Tap a server row to highlight it. The next table seated will go to that server. Tap again to deselect.</p>
-      </div>
-    </div>
-  </div>
-  <div class="callout info" style="margin-top:16px;">
-    <div class="callout-icon">ℹ️</div>
-    <div>Tap <strong>+ Seat</strong> at the bottom of the rotation panel to log a walk-in or carry-out to the next server without using a table.</div>
   </div>
 </div>
 
