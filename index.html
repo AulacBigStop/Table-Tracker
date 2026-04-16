@@ -242,7 +242,7 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
   <button id="btn-redo" disabled>↪ Redo</button>
   <button id="btn-reset-pos">↩ Reset All Table Positions</button>
   <button id="btn-logout">⏻ Logout</button>
-  <button id="btn-clr">✕ Clear All</button>
+  <button id="btn-clr">✕ Clear</button>
 </div>
 
 <div id="main">
@@ -284,13 +284,14 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
 
 <!-- NAME PICKER -->
 <div id="name-picker" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10001;align-items:center;justify-content:center;">
-  <div style="background:#17171f;border:1px solid rgba(255,255,255,0.11);border-radius:14px;padding:20px;width:min(340px,92vw);display:flex;flex-direction:column;gap:10px;">
+  <div style="background:#17171f;border:1px solid rgba(255,255,255,0.11);border-radius:14px;padding:20px;width:min(420px,96vw);display:flex;flex-direction:column;gap:10px;">
     <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:#FFD700;letter-spacing:1px;" id="name-picker-title">SELECT SERVER NAME</div>
-    <div id="name-picker-list" style="display:flex;flex-direction:column;gap:6px;max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch;"></div>
+    <div id="name-picker-list" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;"></div>
     <div style="display:flex;gap:7px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.08);">
       <input id="name-picker-add-input" type="text" placeholder="Add a name…" maxlength="20"
         style="flex:1;padding:10px;border-radius:8px;border:1px dashed rgba(255,215,0,0.3);background:rgba(255,215,0,0.04);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none;">
       <button id="name-picker-add-btn" style="padding:10px 14px;border-radius:8px;border:1px solid rgba(255,215,0,0.35);background:rgba(255,215,0,0.1);color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;">＋</button>
+      <button id="name-picker-remove-btn" style="padding:10px 14px;border-radius:8px;border:1px solid rgba(255,80,80,0.3);background:rgba(255,80,80,0.07);color:rgba(255,100,100,0.8);font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;">✕ Remove</button>
     </div>
     <button id="name-picker-cancel" style="padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:13px;cursor:pointer;touch-action:manipulation;">Cancel</button>
   </div>
@@ -349,6 +350,22 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
       <button id="confirm-no">Cancel</button>
       <button id="confirm-yes">Confirm</button>
     </div>
+  </div>
+</div>
+
+<!-- CLEAR OPTIONS MODAL -->
+<div id="clear-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:700;align-items:center;justify-content:center;">
+  <div style="background:#17171f;border:1px solid rgba(255,255,255,0.11);border-radius:14px;padding:22px;width:min(320px,92vw);display:flex;flex-direction:column;gap:10px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:#ff8080;letter-spacing:.5px;">CLEAR OPTIONS</div>
+    <button id="clear-opt-all" style="padding:14px 16px;border-radius:10px;border:1px solid rgba(255,80,80,0.3);background:rgba(255,80,80,0.07);color:#ff8080;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;text-align:left;">
+      ✕ New Day — Clear All<br>
+      <span style="font-size:10px;opacity:.6;font-weight:400;">Resets everything · returns to 2 servers · requires password</span>
+    </button>
+    <button id="clear-opt-counts" style="padding:14px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;text-align:left;">
+      ↺ Reset Guest Counts<br>
+      <span style="font-size:10px;opacity:.6;font-weight:400;">Zeroes all counts · keeps tables & servers · rebalances rotation</span>
+    </button>
+    <button id="clear-modal-cancel" style="padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;touch-action:manipulation;">Cancel</button>
   </div>
 </div>
 
@@ -655,6 +672,7 @@ function showNamePicker(title, onPick, forceMode){
   const addInput = document.getElementById('name-picker-add-input');
   const cancelBtn = document.getElementById('name-picker-cancel');
   document.getElementById('name-picker-title').textContent = title;
+  let _namePickerTitle = title;
   addInput.value = '';
   cancelBtn.style.display = forceMode ? 'none' : '';
 
@@ -663,52 +681,59 @@ function showNamePicker(title, onPick, forceMode){
 
   function renderList(){
     list.innerHTML = '';
-    SERVER_NAME_LIST.forEach((n, idx) => {
-      const inUse = usedNames.has(n);
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:6px;';
+    document.getElementById('name-picker-title').textContent = _namePickerTitle;
+    const sorted = SERVER_NAME_LIST.map((n, origIdx) => ({n, origIdx}))
+      .sort((a, b) => a.n.localeCompare(b.n));
 
+    sorted.forEach(({n}) => {
+      const inUse = usedNames.has(n);
       const btn = document.createElement('button');
       btn.textContent = n;
-      btn.style.cssText = `flex:1;padding:10px 12px;border-radius:8px;text-align:left;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;cursor:${inUse?'default':'pointer'};touch-action:manipulation;border:1px solid ${inUse?'rgba(255,255,255,0.06)':'rgba(255,255,255,0.14)'};background:${inUse?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.06)'};color:${inUse?'rgba(255,255,255,0.2)':'var(--text)'};`;
+      btn.style.cssText = `width:100%;padding:10px 6px;border-radius:8px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;cursor:${inUse?'default':'pointer'};touch-action:manipulation;border:1px solid ${inUse?'rgba(255,255,255,0.06)':'rgba(255,255,255,0.14)'};background:${inUse?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.06)'};color:${inUse?'rgba(255,255,255,0.2)':'var(--text)'};`;
       if(!inUse) btn.addEventListener('pointerup', ()=>{ overlay.style.display='none'; onPick(n); });
-
-      const del = document.createElement('button');
-      del.textContent = '✕';
-      del.title = 'Remove from list';
-      del.style.cssText = `padding:10px 11px;border-radius:8px;border:1px solid rgba(255,80,80,0.2);background:rgba(255,80,80,0.06);color:rgba(255,80,80,0.6);font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;touch-action:manipulation;flex-shrink:0;`;
-      del.addEventListener('pointerup', ()=>{
-        const pwdOverlay = document.getElementById('pwd-overlay');
-        const pwdInput   = document.getElementById('pwd-input');
-        const pwdError   = document.getElementById('pwd-error');
-        pwdInput.value = '';
-        pwdError.style.display = 'none';
-        pwdOverlay.style.display = 'flex';
-        setTimeout(()=>pwdInput.focus(), 100);
-        document.getElementById('pwd-confirm').onpointerup = () => {
-          if(pwdInput.value === '2047'){
-            pwdOverlay.style.display = 'none';
-            SERVER_NAME_LIST.splice(idx, 1);
-            saveNameList();
-            pushToFirebase();
-            renderList();
-          } else {
-            pwdError.style.display = 'block';
-            pwdInput.value = '';
-            pwdInput.focus();
-          }
-        };
-        document.getElementById('pwd-cancel').onpointerup = () => {
-          pwdOverlay.style.display = 'none';
-        };
-        pwdInput.onkeydown = e => { if(e.key==='Enter') document.getElementById('pwd-confirm').dispatchEvent(new PointerEvent('pointerup')); };
-      });
-
-      row.appendChild(btn);
-      row.appendChild(del);
-      list.appendChild(row);
+      list.appendChild(btn);
     });
   }
+
+  // Remove button: password first, then tap-to-remove sub-picker
+  document.getElementById('name-picker-remove-btn').onpointerup = () => {
+    if(SERVER_NAME_LIST.length === 0) return;
+    const pwdOverlay = document.getElementById('pwd-overlay');
+    const pwdInput   = document.getElementById('pwd-input');
+    const pwdError   = document.getElementById('pwd-error');
+    pwdInput.value = '';
+    pwdError.style.display = 'none';
+    pwdOverlay.style.display = 'flex';
+    setTimeout(()=>pwdInput.focus(), 100);
+    document.getElementById('pwd-confirm').onpointerup = () => {
+      if(pwdInput.value === '2047'){
+        pwdOverlay.style.display = 'none';
+        // Switch grid to remove-mode: tap a name to delete it
+        list.innerHTML = '';
+        const sorted = SERVER_NAME_LIST.map((n, origIdx) => ({n, origIdx}))
+          .sort((a, b) => a.n.localeCompare(b.n));
+        sorted.forEach(({n, origIdx}) => {
+          const btn = document.createElement('button');
+          btn.textContent = n;
+          btn.style.cssText = `width:100%;padding:10px 6px;border-radius:8px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation;border:1px solid rgba(255,80,80,0.35);background:rgba(255,80,80,0.08);color:rgba(255,130,130,0.9);`;
+          btn.addEventListener('pointerup', ()=>{
+            SERVER_NAME_LIST.splice(origIdx, 1);
+            saveNameList();
+            pushToFirebase();
+            renderList(); // back to normal mode
+          });
+          list.appendChild(btn);
+        });
+        document.getElementById('name-picker-title').textContent = 'TAP A NAME TO REMOVE';
+      } else {
+        pwdError.style.display = 'block';
+        pwdInput.value = '';
+        pwdInput.focus();
+      }
+    };
+    document.getElementById('pwd-cancel').onpointerup = () => { pwdOverlay.style.display = 'none'; };
+    pwdInput.onkeydown = e => { if(e.key==='Enter') document.getElementById('pwd-confirm').dispatchEvent(new PointerEvent('pointerup')); };
+  };
 
   // Add button handler
   const addBtn = document.getElementById('name-picker-add-btn');
@@ -1153,6 +1178,7 @@ function renderRot(){
 
   updateActionContext();
   renderBanner();
+  updateSrvDecBtn();
 }
 
 // Add +1 to a coffee break server only if they have the lowest guest count
@@ -2143,6 +2169,14 @@ document.getElementById('srv-dec').addEventListener('pointerup', e=>{
   const name = st.names[s] || `Server ${s}`;
   showConfirm(`Cut ${name} from the floor?`, () => applyServerCount(s - 1));
 });
+
+// Keep − button visually disabled at minimum
+function updateSrvDecBtn(){
+  const btn = document.getElementById('srv-dec');
+  if(!btn) return;
+  btn.disabled = st.servers <= 2;
+  btn.style.opacity = st.servers <= 2 ? '0.25' : '';
+}
 document.getElementById('srv-inc').addEventListener('pointerup', e=>{
   e.preventDefault();
   const newNum = st.servers + 1;
@@ -2173,6 +2207,16 @@ document.getElementById('btn-reset-pos').addEventListener('pointerup', ()=>{
 });
 
 document.getElementById('btn-clr').addEventListener('pointerup',()=>{
+  const modal = document.getElementById('clear-modal');
+  modal.style.display = 'flex';
+});
+document.getElementById('clear-modal-cancel').addEventListener('pointerup',()=>{
+  document.getElementById('clear-modal').style.display = 'none';
+});
+
+// Option 1: New Day — full reset with password
+document.getElementById('clear-opt-all').addEventListener('pointerup',()=>{
+  document.getElementById('clear-modal').style.display = 'none';
   const pwdOverlay = document.getElementById('pwd-overlay');
   const pwdInput   = document.getElementById('pwd-input');
   const pwdError   = document.getElementById('pwd-error');
@@ -2180,10 +2224,7 @@ document.getElementById('btn-clr').addEventListener('pointerup',()=>{
   pwdError.style.display = 'none';
   pwdOverlay.style.display = 'flex';
   setTimeout(()=>pwdInput.focus(), 100);
-
-  document.getElementById('pwd-cancel').onpointerup = ()=>{
-    pwdOverlay.style.display = 'none';
-  };
+  document.getElementById('pwd-cancel').onpointerup = ()=>{ pwdOverlay.style.display = 'none'; };
   document.getElementById('pwd-confirm').onpointerup = ()=>{
     if(pwdInput.value === '2047'){
       pwdOverlay.style.display = 'none';
@@ -2196,7 +2237,6 @@ document.getElementById('btn-clr').addEventListener('pointerup',()=>{
       document.getElementById('srv-count').textContent = 2;
       localStorage.removeItem(LS_KEY);
       closeModal();
-      // Force name selection for each active section before resuming
       pickNamesSequentially(1, 2, ()=>{ renderAll(); });
     } else {
       pwdError.style.display = 'block';
@@ -2204,8 +2244,20 @@ document.getElementById('btn-clr').addEventListener('pointerup',()=>{
       pwdInput.focus();
     }
   };
-  // Also submit on Enter
   pwdInput.onkeydown = e=>{ if(e.key==='Enter') document.getElementById('pwd-confirm').dispatchEvent(new Event('pointerup')); };
+});
+
+// Option 2: Reset guest counts only — no password needed
+document.getElementById('clear-opt-counts').addEventListener('pointerup',()=>{
+  document.getElementById('clear-modal').style.display = 'none';
+  showConfirm('Reset all guest counts to zero?', ()=>{
+    // Zero all active server counts; preserve everything else
+    for(let i = 1; i <= st.servers; i++) st.guestTotals[i] = 0;
+    st.newServers = new Set();
+    st.selectedSec = null;
+    snapshotState();
+    renderAll();
+  });
 });
 document.getElementById('overlay').addEventListener('pointerup', e=>{
   if(e.target===document.getElementById('overlay')) closeModal();
@@ -2339,7 +2391,21 @@ loadLocal();
 renderAll(); // seeds undo stack via snapshotState inside renderAll
 
 
-// ── FIREBASE SYNC (REST API — no SDK required) ──────────────
+// ── POINTER GUARD — prevents Firebase sync from destroying DOM elements mid-tap
+let _pointerDown   = false;
+let _pendingRender = false;
+
+document.addEventListener('pointerdown', () => { _pointerDown = true; }, true);
+document.addEventListener('pointerup', () => {
+  _pointerDown = false;
+  if(_pendingRender){ _pendingRender = false; renderOnly(); }
+}, true);
+document.addEventListener('pointercancel', () => {
+  _pointerDown = false;
+  if(_pendingRender){ _pendingRender = false; renderOnly(); }
+}, true);
+
+
 const FB_URL = 'https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app/shift';
 
 
@@ -2351,7 +2417,12 @@ function dbToState(data){
     deserializeState(data);
     _fbSyncing = false;
     saveLocal();
-    renderOnly();
+    // Don't rebuild DOM if user has a finger down — defer until pointer lifts
+    if(_pointerDown){
+      _pendingRender = true;
+    } else {
+      renderOnly();
+    }
   } catch(e){
     _fbSyncing = false;
     console.error('[FB] dbToState error:', e);
