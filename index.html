@@ -618,6 +618,14 @@ function clearUnassignedStools(){
     }
   }
 }
+// Returns true if every non-stool table in section s is currently seated
+function isSecFullySeated(s){
+  const stoolIds = new Set(Object.keys(STOOL_POS).map(Number));
+  const tableIds = (L[st.servers][s] || []).filter(id => !stoolIds.has(id));
+  if(tableIds.length === 0) return false; // no tables → not applicable
+  return tableIds.every(id => st.tables[id] !== undefined);
+}
+
 function nextUp(){
   if(st.newServers.size > 0){
     let min=Infinity, best=null;
@@ -625,6 +633,7 @@ function nextUp(){
       if(s > st.servers) continue;
       if(st.onBreak.has(s)) continue;
       if(st.cutServers.has(s)) continue;
+      if(isSecFullySeated(s)) continue;
       const sc=secGuestScore(s); if(sc<min){min=sc;best=s;}
     }
     if(best !== null) return best;
@@ -633,6 +642,7 @@ function nextUp(){
   for(let s=1;s<=st.servers;s++){
     if(st.onBreak.has(s)) continue;
     if(st.cutServers.has(s)) continue;
+    if(isSecFullySeated(s)) continue;
     const sc=secGuestScore(s);if(sc<min){min=sc;best=s;}
   }
   return best;
@@ -937,6 +947,7 @@ function renderRot(){
     const isOnBreak = st.onBreak.has(s);
     const breakT    = st.breakType[s];
     const breakIcon = isOnBreak ? (breakT === 'meal' ? '🍽' : '☕') : '☕';
+    const isFull    = !isOnBreak && !st.cutServers.has(s) && isSecFullySeated(s);
     const row = document.createElement('div');
     row.className = 'sec-row' + (isNext?' next-up':'') + (isSel?' selected':'') + (isOnBreak?' on-break':'');
     rowEls[s] = row;
@@ -955,6 +966,7 @@ function renderRot(){
     nameCol.className = 'sec-name-col';
     if(isSel){ const sl=document.createElement('div');sl.className='sel-lbl';sl.textContent='● SELECTED';nameCol.appendChild(sl); }
     else if(isOnBreak){ const bl=document.createElement('div');bl.className='next-lbl';bl.style.cssText='color:#FFA500;font-size:9px;letter-spacing:.5px;';bl.textContent=`${breakT==='meal'?'🍽':'☕'} ${breakT==='meal'?'MEAL':'COFFEE'} BREAK`;nameCol.appendChild(bl); }
+    else if(isFull){ const fl=document.createElement('div');fl.className='next-lbl';fl.style.cssText='color:#aaa;font-size:9px;letter-spacing:.5px;';fl.textContent='⬛ FULL — AUTO SKIP';nameCol.appendChild(fl); }
     else if(st.newServers.has(s)){ const nl=document.createElement('div');nl.className='next-lbl';nl.textContent='★ NEW · NEXT UP';nameCol.appendChild(nl); }
     else if(isNext){ const nl=document.createElement('div');nl.className='next-lbl';nl.textContent='NEXT UP';nameCol.appendChild(nl); }
     const ni = document.createElement('div');
@@ -1181,9 +1193,10 @@ function renderRot(){
   updateSrvDecBtn();
 }
 
-// Add +1 to a coffee break server only if they have the lowest guest count
+// Add +1 to a skipped server only if they have the lowest guest count.
+// Two reasons a server gets skipped: coffee break, or all their tables already full.
 function tickCoffeeBreakServers(){
-  // Find the server with the lowest score (including coffee break servers, excluding meal break & cut)
+  // Find the server with the lowest score (including skippable servers, excluding meal break & cut)
   let minScore = Infinity, minSrv = null;
   for(let i = 1; i <= st.servers; i++){
     if(st.cutServers.has(i)) continue;
@@ -1191,8 +1204,14 @@ function tickCoffeeBreakServers(){
     const sc = secGuestScore(i);
     if(sc < minScore){ minScore = sc; minSrv = i; }
   }
+  if(!minSrv) return;
   // If that lowest server is on a coffee break, give them +1
-  if(minSrv && st.onBreak.has(minSrv) && st.breakType[minSrv] === 'coffee'){
+  if(st.onBreak.has(minSrv) && st.breakType[minSrv] === 'coffee'){
+    st.guestTotals[minSrv] = (st.guestTotals[minSrv] || 0) + 1;
+    return;
+  }
+  // If that lowest server's section is completely seated (all tables full), give them +1
+  if(isSecFullySeated(minSrv)){
     st.guestTotals[minSrv] = (st.guestTotals[minSrv] || 0) + 1;
   }
 }
