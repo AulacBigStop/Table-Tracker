@@ -18,9 +18,9 @@
   --border:rgba(255,255,255,0.08); --text:#eee; --dim:rgba(255,255,255,0.38);
   --accent:#FFD700;
 }
-*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;}
-html,body{height:100%;overflow:hidden;font-family:'IBM Plex Mono','Courier New',monospace;background:var(--bg);color:var(--text);}
-body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-select:none;user-select:none;}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+html,body{height:100%;overflow:hidden;font-family:'IBM Plex Mono','Courier New',monospace;background:var(--bg);color:var(--text);text-rendering:optimizeLegibility;}
+body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-select:none;user-select:none;touch-action:manipulation;overscroll-behavior:none;}
 
 /* HEADER */
 #hdr{height:72px;min-height:72px;flex-shrink:0;background:var(--surf);border-bottom:1px solid var(--border);
@@ -53,9 +53,9 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
 
 /* LEFT — FLOOR (takes all remaining width) */
 #panel-floor{display:flex;flex-direction:column;flex:1;min-width:0;border-right:2px solid var(--border);}
-#flr-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:6px;overflow:hidden;touch-action:none;}
-#flr-clip{position:relative;overflow:hidden;flex-shrink:0;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,0.7);-webkit-transform:translateZ(0);transform:translateZ(0);}
-#flr{position:relative;background:#191b1f;border-radius:10px;border:1.5px solid rgba(255,255,255,0.1);-webkit-transform:translateZ(0);transform:translateZ(0);}
+#flr-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:6px;overflow:hidden;touch-action:none;contain:layout style;}
+#flr-clip{position:relative;overflow:hidden;flex-shrink:0;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,0.7);-webkit-transform:translateZ(0);transform:translateZ(0);contain:layout style paint;}
+#flr{position:relative;background:#191b1f;border-radius:10px;border:1.5px solid rgba(255,255,255,0.1);-webkit-transform:translateZ(0);transform:translateZ(0);contain:layout style paint;-webkit-backface-visibility:hidden;backface-visibility:hidden;}
 .bg-zone{position:absolute;pointer-events:none;border-radius:4px;}
 .zone-lbl{position:absolute;pointer-events:none;font-family:'IBM Plex Mono',monospace;font-weight:700;color:rgba(255,255,255,0.09);letter-spacing:2px;text-align:center;}
 .tbl{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;
@@ -85,19 +85,18 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
 #next-banner-name{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:700;
   color:#fff;letter-spacing:1px;white-space:nowrap;}
 /* RIGHT — ROTATION (fixed narrow column) */
-#panel-rot{width:220px;min-width:220px;flex-shrink:0;display:flex;flex-direction:column;min-height:0;}
+#panel-rot{width:220px;min-width:220px;flex-shrink:0;display:flex;flex-direction:column;min-height:0;contain:layout style;}
 #rot-header{padding:6px 10px;background:var(--surf);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;}
 #rot-title{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:1px;}
 
 /* server list */
 #rot-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:2px 5px 2px;
-  display:flex;flex-direction:column;gap:2px;}
+  display:flex;flex-direction:column;gap:2px;contain:layout style;}
 #rot-scroll::-webkit-scrollbar{width:3px;}
 #rot-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px;}
 
 .sec-row{border-radius:6px;padding:3px 5px;
-  cursor:pointer;}
-.sec-row:hover{background:rgba(255,255,255,0.04);}
+  cursor:pointer;contain:layout style;}
 .sec-row.next-up{background:rgba(255,215,0,0.07);outline:1.5px solid rgba(255,215,0,0.28);}
 .sec-row.selected{outline:2px solid #fff !important;background:rgba(255,255,255,0.08) !important;}
 
@@ -291,7 +290,7 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
 <div id="time-picker" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:10001;align-items:center;justify-content:center;">
   <div style="background:#17171f;border:1px solid rgba(255,255,255,0.11);border-radius:14px;padding:20px;width:min(380px,96vw);display:flex;flex-direction:column;gap:10px;">
     <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:#FFD700;letter-spacing:1px;" id="time-picker-title">SHIFT END TIME</div>
-    <div id="time-picker-list" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;max-height:52vh;overflow-y:auto;-webkit-overflow-scrolling:touch;"></div>
+    <div id="time-picker-list" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;"></div>
     <button id="time-picker-skip" style="padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;touch-action:manipulation;">Skip</button>
   </div>
 </div>
@@ -620,12 +619,25 @@ function clearUnassignedStools(){
     }
   }
 }
+// Pre-computed stool ID set (built once) to avoid Set allocation per call
+const _STOOL_ID_SET = new Set(Object.keys(STOOL_POS).map(Number));
+// Cache non-stool tables per (layout, section) pair
+const _secTableCache = {};
+function _secNonStoolTables(s){
+  const key = st.servers + ':' + s;
+  if(_secTableCache[key]) return _secTableCache[key];
+  const arr = (L[st.servers][s] || []).filter(id => !_STOOL_ID_SET.has(id));
+  _secTableCache[key] = arr;
+  return arr;
+}
 // Returns true if every non-stool table in section s is currently seated
 function isSecFullySeated(s){
-  const stoolIds = new Set(Object.keys(STOOL_POS).map(Number));
-  const tableIds = (L[st.servers][s] || []).filter(id => !stoolIds.has(id));
-  if(tableIds.length === 0) return false; // no tables → not applicable
-  return tableIds.every(id => st.tables[id] !== undefined);
+  const tableIds = _secNonStoolTables(s);
+  if(tableIds.length === 0) return false;
+  for(const id of tableIds){
+    if(st.tables[id] === undefined) return false;
+  }
+  return true;
 }
 
 function nextUp(){
@@ -768,13 +780,18 @@ function showTimePicker(serverName, onPick){
   document.getElementById('time-picker-title').textContent = `END TIME — ${serverName.toUpperCase()}`;
   list.innerHTML = '';
 
-  // Build 15-min slots starting from the current hour's :00 so :00 always lands in column 1
-  const now  = new Date();
-  const base = new Date(now);
-  base.setMinutes(0, 0, 0); // snap to hour start
+  // First slot is the next :00 hour boundary that is more than 2h45m in the future.
+  // Keeps :00 in column 1 of the 4-column grid.
+  const now       = new Date();
+  const MIN_LEAD  = (2 * 60 + 45) * 60 * 1000; // 2h45m in ms
+  const threshold = new Date(now.getTime() + MIN_LEAD);
+  const base      = new Date(threshold);
+  // Round up to the next whole hour (if threshold is already on the hour, bump to next)
+  base.setHours(base.getHours() + 1);
+  base.setMinutes(0, 0, 0);
 
   const slots = [];
-  for(let i = 0; i < 48; i++){   // 48 slots = 12 hours
+  for(let i = 0; i < 40; i++){   // 40 slots = 10 hours
     const d = new Date(base.getTime() + i * 15 * 60 * 1000);
     slots.push(d);
   }
@@ -1425,7 +1442,7 @@ function renderFloor(){
       const wrap = document.createElement('div');
       wrap.style.cssText = `position:absolute;left:${rpos.l}%;top:${rpos.t}%;width:${rpos.w}%;height:${rpos.h}%;
         display:flex;flex-direction:${isH?'row':'column'};align-items:stretch;gap:4%;cursor:pointer;
-        opacity:${seated?'1':'0.36'};transition:transform .12s,opacity .15s;`;
+        opacity:${seated?'1':'0.36'};`;
       if(seated) wrap.style.filter='drop-shadow(0 0 3px rgba(255,255,255,0.25))';
 
       const tbl = document.createElement('div');
@@ -1450,7 +1467,7 @@ function renderFloor(){
 
       const wrap = document.createElement('div');
       wrap.style.cssText = `position:absolute;left:${rpos.l}%;top:${rpos.t}%;width:${rpos.w}%;height:${rpos.h}%;
-        cursor:pointer;opacity:${seated?'1':'0.36'};transition:opacity .15s;`;
+        cursor:pointer;opacity:${seated?'1':'0.36'};`;
       if(seated) wrap.style.filter='drop-shadow(0 0 3px rgba(255,255,255,0.25))';
 
       if(pos.s === 'corner-booth'){
@@ -1483,7 +1500,7 @@ function renderFloor(){
       const wrap = document.createElement('div');
       wrap.style.cssText = `position:absolute;left:${rpos.l}%;top:${rpos.t}%;width:${rpos.w}%;height:${rpos.h}%;
         display:flex;flex-direction:column;align-items:center;justify-content:space-between;cursor:pointer;
-        opacity:${seated?'1':'0.36'};transition:transform .12s,opacity .15s;`;
+        opacity:${seated?'1':'0.36'};`;
       if(seated) wrap.style.filter='drop-shadow(0 0 3px rgba(255,255,255,0.25))';
 
       function chairRow(){
@@ -2396,14 +2413,32 @@ function renderBanner(){
   }
 }
 
-function renderOnly(){
+// rAF-batched renders — many actions call renderOnly/renderAll in quick
+// succession (e.g. seating a group of tables). Coalesce to one paint per frame.
+let _renderScheduled = false;
+let _renderPushFlag  = false;
+let _renderSaveFlag  = false;
+let _renderSnapFlag  = false;
+
+function _flushRender(){
+  _renderScheduled = false;
   renderFloor(); renderStatus(); renderRot(); renderBanner();
+  if(_renderPushFlag){ _renderPushFlag = false; pushToFirebase(); }
+  if(_renderSaveFlag){ _renderSaveFlag = false; saveLocal();       }
+  if(_renderSnapFlag){ _renderSnapFlag = false; snapshotState();   }
 }
+function scheduleRender(){
+  if(_renderScheduled) return;
+  _renderScheduled = true;
+  requestAnimationFrame(_flushRender);
+}
+
+function renderOnly(){ scheduleRender(); }
 function renderAll(){
-  renderOnly();
-  pushToFirebase();
-  saveLocal();
-  snapshotState();
+  _renderPushFlag = true;
+  _renderSaveFlag = true;
+  _renderSnapFlag = true;
+  scheduleRender();
 }
 
 // ── LOGIN SCREEN
@@ -2442,10 +2477,15 @@ function renderAll(){
   input.addEventListener('keydown', e=>{ if(e.key==='Enter') tryLogin(); });
 })();
 
+let _saveLocalTimer = null;
 function saveLocal(){
-  try{
-    localStorage.setItem(LS_KEY, JSON.stringify(stateToObj()));
-  } catch(e){}
+  if(_saveLocalTimer) return; // coalesce calls within the same debounce window
+  _saveLocalTimer = setTimeout(()=>{
+    _saveLocalTimer = null;
+    try{
+      localStorage.setItem(LS_KEY, JSON.stringify(stateToObj()));
+    } catch(e){}
+  }, 250);
 }
 
 function loadLocal(){
@@ -2466,15 +2506,15 @@ renderAll(); // seeds undo stack via snapshotState inside renderAll
 let _pointerDown   = false;
 let _pendingRender = false;
 
-document.addEventListener('pointerdown', () => { _pointerDown = true; }, true);
+document.addEventListener('pointerdown', () => { _pointerDown = true; }, {capture:true, passive:true});
 document.addEventListener('pointerup', () => {
   _pointerDown = false;
   if(_pendingRender){ _pendingRender = false; renderOnly(); }
-}, true);
+}, {capture:true, passive:true});
 document.addEventListener('pointercancel', () => {
   _pointerDown = false;
   if(_pendingRender){ _pendingRender = false; renderOnly(); }
-}, true);
+}, {capture:true, passive:true});
 
 
 const FB_URL = 'https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app/shift';
@@ -2500,19 +2540,22 @@ function dbToState(data){
   }
 }
 
-// Write state to Firebase using REST PUT
+// Write state to Firebase using REST PUT — debounced to coalesce rapid edits
 pushToFirebase = function(){
   if(_fbSyncing || !_fbReady) return;
   clearTimeout(_fbPushTimer);
   _fbPushTimer = setTimeout(()=>{
+    const body = JSON.stringify(stateToObj());
+    // Skip if identical to last successful poll result
+    if(body === _lastPollData){ setSyncDot(true); return; }
     fetch(FB_URL + '.json', {
       method: 'PUT',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(stateToObj())
+      body: body
     })
-    .then(r => { setSyncDot(r.ok); })
+    .then(r => { if(r.ok){ _lastPollData = body; setSyncDot(true); } else setSyncDot(false); })
     .catch(()=> setSyncDot(false));
-  }, 300);
+  }, 400);
 };
 
 // Sync indicator dot
@@ -2524,14 +2567,24 @@ function setSyncDot(ok){
   syncDot.title = ok ? 'Synced' : 'Offline';
 }
 
-// Listen for changes by polling Firebase every 2 seconds
+// Listen for changes by polling Firebase every 2 seconds (slower when hidden)
 let _lastPollData = null;
+let _pollBackoff  = 2000;           // ms between polls
+let _pollFailures = 0;
+
+function _nextPollDelay(){
+  if(document.hidden) return 10000;  // tab/app backgrounded → slow poll
+  if(_pollFailures > 0) return Math.min(2000 * (2 ** _pollFailures), 30000);
+  return _pollBackoff;
+}
+
 async function poll(){
   try{
     const res = await fetch(FB_URL + '.json');
     if(res.ok){
       const data = await res.json();
       setSyncDot(true);
+      _pollFailures = 0;
       const asStr = JSON.stringify(data);
       if(asStr !== _lastPollData){
         if(!_fbSyncing){
@@ -2539,16 +2592,23 @@ async function poll(){
           dbToState(data);
         }
       }
-      _fbReady = true; // allow writes only after first successful read
+      _fbReady = true;
     } else {
       setSyncDot(false);
+      _pollFailures++;
     }
   } catch(e){
     setSyncDot(false);
+    _pollFailures++;
   }
-  setTimeout(poll, 2000);
+  setTimeout(poll, _nextPollDelay());
 }
 poll();
+
+// Resume fast polling immediately when app comes back to foreground
+document.addEventListener('visibilitychange', () => {
+  if(!document.hidden) _pollFailures = 0;
+});
 </script>
 
 <!-- STAFF GUIDE OVERLAY -->
