@@ -144,15 +144,12 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
 
 /* ACTION BAR */
 #rot-actions{flex-shrink:0;background:var(--surf);border-top:1px solid var(--border);padding:7px 8px;display:flex;flex-direction:column;gap:5px;}
-#action-context{font-size:11px;font-weight:600;letter-spacing:.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-#action-context.next{color:var(--accent);}
-#action-context.manual{color:#fff;}
+#action-context{font-size:11px;font-weight:600;letter-spacing:.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--accent);}
 #action-btns{display:flex;gap:7px;}
 .act-btn{flex:1;padding:13px 4px;border-radius:10px;border:none;text-align:center;
   font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:700;cursor:pointer;transition:opacity .12s;line-height:1.2;}
 .act-btn:active{transform:scale(.93);}
 .act-lbl{font-size:9px;font-weight:400;opacity:.7;display:block;letter-spacing:.3px;margin-top:4px;}
-.act-seat{background:rgba(255,215,0,0.15);color:var(--accent);border:1.5px solid rgba(255,215,0,0.4);}
 .act-d{background:rgba(180,130,255,0.14);color:#b482ff;border:1.5px solid rgba(180,130,255,0.38);}
 
 /* TABLE SEAT MODAL */
@@ -272,13 +269,6 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
       <div id="rot-title">⚖ ROTATION</div>
     </div>
     <div id="rot-scroll"></div>
-    <div id="rot-actions">
-      <div id="action-context" class="next"></div>
-      <div id="action-btns">
-        <button class="act-btn act-seat" id="act-seat">＋ Seat<span class="act-lbl">Choose party size</span></button>
-        <button class="act-btn act-d"   id="act-d"   >−<span class="act-lbl">Skip</span></button>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -648,32 +638,10 @@ function nextUp(){
   return best;
 }
 // The section that will receive the next button press
-function activeTarget(){ return st.selectedSec !== null ? st.selectedSec : nextUp(); }
+function activeTarget(){ return nextUp(); }
 
 // ── SELECTION
-function selectSec(s){
-  // Clicking the already-selected row deselects (back to auto)
-  st.selectedSec = (st.selectedSec === s) ? null : s;
-  updateActionContext();
-  renderRot();
-}
-function updateActionContext(){
-  const ctx = document.getElementById('action-context');
-  if(st.selectedSec !== null){
-    const c = FLOOR_C[st.selectedSec];
-    const name = st.names[st.selectedSec]||`Server ${st.selectedSec}`;
-    ctx.className = 'manual';
-    ctx.innerHTML = `<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${c.bg};margin-right:5px;vertical-align:middle;"></span>Logging to: <strong>${name}</strong> <span style="opacity:.45;font-weight:400;font-size:9px;">(tap row again to deselect)</span>`;
-  } else {
-    const n = nextUp();
-    const c = n ? FLOOR_C[n] : null;
-    const name = n ? (st.names[n]||`Server ${n}`) : '—';
-    ctx.className = 'next';
-    ctx.innerHTML = c
-      ? `<span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${c.bg};margin-right:5px;vertical-align:middle;"></span>Next up: <strong>${name}</strong>`
-      : 'Next up: —';
-  }
-}
+
 
 // ── NAME PICKER
 function showNamePicker(title, onPick, forceMode){
@@ -939,8 +907,7 @@ function renderRot(){
 
   for(const s of secs){
     if(st.cutServers.has(s)) continue;  // shown in CUT SERVERS section instead
-    const isNext = s === next && st.selectedSec === null;
-    const isSel  = s === st.selectedSec;
+    const isNext = s === next;
     const col    = FLOOR_C[s];
     const name   = st.names[s]||`Server ${s}`;
 
@@ -949,9 +916,8 @@ function renderRot(){
     const breakIcon = isOnBreak ? (breakT === 'meal' ? '🍽' : '☕') : '☕';
     const isFull    = !isOnBreak && !st.cutServers.has(s) && isSecFullySeated(s);
     const row = document.createElement('div');
-    row.className = 'sec-row' + (isNext?' next-up':'') + (isSel?' selected':'') + (isOnBreak?' on-break':'');
+    row.className = 'sec-row' + (isNext?' next-up':'') + (isOnBreak?' on-break':'');
     rowEls[s] = row;
-    row.addEventListener('pointerup', e => { if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON') return; if(st._modalCooldown) return; selectSec(s); });
 
     // Top line: badge + name
     const rowTop = document.createElement('div');
@@ -964,8 +930,7 @@ function renderRot(){
 
     const nameCol = document.createElement('div');
     nameCol.className = 'sec-name-col';
-    if(isSel){ const sl=document.createElement('div');sl.className='sel-lbl';sl.textContent='● SELECTED';nameCol.appendChild(sl); }
-    else if(isOnBreak){ const bl=document.createElement('div');bl.className='next-lbl';bl.style.cssText='color:#FFA500;font-size:9px;letter-spacing:.5px;';bl.textContent=`${breakT==='meal'?'🍽':'☕'} ${breakT==='meal'?'MEAL':'COFFEE'} BREAK`;nameCol.appendChild(bl); }
+    if(isOnBreak){ const bl=document.createElement('div');bl.className='next-lbl';bl.style.cssText='color:#FFA500;font-size:9px;letter-spacing:.5px;';bl.textContent=`${breakT==='meal'?'🍽':'☕'} ${breakT==='meal'?'MEAL':'COFFEE'} BREAK`;nameCol.appendChild(bl); }
     else if(isFull){ const fl=document.createElement('div');fl.className='next-lbl';fl.style.cssText='color:#aaa;font-size:9px;letter-spacing:.5px;';fl.textContent='⬛ FULL — AUTO SKIP';nameCol.appendChild(fl); }
     else if(st.newServers.has(s)){ const nl=document.createElement('div');nl.className='next-lbl';nl.textContent='★ NEW · NEXT UP';nameCol.appendChild(nl); }
     else if(isNext){ const nl=document.createElement('div');nl.className='next-lbl';nl.textContent='NEXT UP';nameCol.appendChild(nl); }
@@ -998,7 +963,7 @@ function renderRot(){
 
     const scoreEl = document.createElement('div');
     scoreEl.className = 'sec-score';
-    scoreEl.style.color = isSel?'#fff':isNext?'var(--accent)':score>0?'var(--text)':'var(--dim)';
+    scoreEl.style.color = isNext?'var(--accent)':score>0?'var(--text)':'var(--dim)';
     scoreEl.textContent = Math.round(score);
 
     const btnPlus = document.createElement('button');
@@ -1188,7 +1153,6 @@ function renderRot(){
     }
   }
 
-  updateActionContext();
   renderBanner();
   updateSrvDecBtn();
 }
@@ -2128,8 +2092,7 @@ document.querySelectorAll('.pb').forEach(b=>{
   });
 });
 
-document.getElementById('act-seat').addEventListener('pointerup', openRotModal);
-document.getElementById('act-d').addEventListener('pointerup', ()=>{ addEvent('D', 1); });
+
 
 function applyServerCount(newCount){
   newCount = Math.max(2, Math.min(11, newCount));
@@ -2745,6 +2708,8 @@ poll();
  background: rgba(255,165,0,0.15); color: #ffa500; border: 1px solid rgba(255,165,0,0.3); }
 .guide-overlay .pill.grey {
  background: rgba(255,255,255,0.06); color: var(--dim); border: 1px solid var(--border); }
+.guide-overlay .pill.blue {
+ background: rgba(0,194,232,0.12); color: #00C2E8; border: 1px solid rgba(0,194,232,0.3); }
 .guide-overlay /* GRID */
 .grid2 {
 
@@ -2840,10 +2805,10 @@ hr {
     <div class="guide-header">
   <div class="guide-title">⬡ Aulac Big Stop</div>
   <h1>Table Tracker<br>Staff Guide</h1>
-  <p>Everything you need to know to run the host stand</p>
+  <p>Everything you need to run the host stand — v1.2</p>
 </div>
 
-<!-- LOGIN -->
+<!-- GETTING STARTED -->
 <div class="section">
   <div class="section-label">Getting Started</div>
   <div class="steps">
@@ -2851,45 +2816,45 @@ hr {
       <div class="step-num">1</div>
       <div class="step-body">
         <strong>Open the app</strong>
-        <p>Tap the <strong>Aulac Big Stop</strong> icon on the iPad home screen. It will open fullscreen — no browser needed.</p>
+        <p>Tap the <strong>Table Tracker</strong> icon on the iPad. It opens fullscreen — no browser needed.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-body">
         <strong>Enter the password</strong>
-        <p>Type the passcode on the login screen and tap <strong>ENTER</strong>. Ask your manager for the password if you don't have it.</p>
+        <p>Type the passcode and tap <strong>ENTER</strong>. Ask your manager if you don't have it.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-body">
         <strong>Set the number of servers</strong>
-        <p>Use the <span class="pill grey">−</span> and <span class="pill grey">+</span> buttons in the top bar to match how many servers are on the floor today. The floor map updates automatically.</p>
+        <p>Tap <span class="pill grey">+</span> to add servers or <span class="pill grey">−</span> to remove them. You'll be prompted to pick a name from the list for each server added. The floor map redraws automatically.</p>
       </div>
     </div>
   </div>
 </div>
 
-<!-- LAYOUT -->
+<!-- SCREEN LAYOUT -->
 <div class="section">
   <div class="section-label">Screen Layout</div>
   <div class="grid2">
     <div class="card">
       <h3>🗺 Floor Map (left)</h3>
-      <p>Shows every table and stool. Each colour belongs to a server's section. Seated tables glow brighter.</p>
+      <p>Every table and stool. Each colour belongs to a server's section. Seated tables glow brighter. Amber-brown tables belong to a server who has been cut.</p>
     </div>
     <div class="card">
       <h3>⚖ Rotation (right)</h3>
-      <p>Lists all servers with their guest count. The server with the lowest count is highlighted as <strong>Next Up</strong>.</p>
+      <p>All servers with their guest count. The lowest count is <strong>NEXT UP</strong>. Scroll down to see the <strong>Cut Servers</strong> list.</p>
     </div>
     <div class="card">
-      <h3>▲ Next Up Banner (bottom)</h3>
-      <p>Large display showing who is next to be seated, plus the next two servers in line.</p>
+      <h3>▲ Next Up Banner</h3>
+      <p>Large display at the bottom showing who is next and the two servers after them.</p>
     </div>
     <div class="card">
       <h3>📊 Status Bar</h3>
-      <p>Shows seated tables, current guests, open tables, and daily totals for the shift.</p>
+      <p>Seated tables, open tables, current guests, and daily totals for the shift.</p>
     </div>
   </div>
 </div>
@@ -2902,28 +2867,55 @@ hr {
       <div class="step-num">1</div>
       <div class="step-body">
         <strong>Tap the table on the floor map</strong>
-        <p>A modal will open showing the table number and which server it belongs to.</p>
+        <p>A modal opens showing the table number and which server it belongs to.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-body">
         <strong>Select the party size</strong>
-        <p>Tap the number of guests (1–9). The table seats immediately and the server's guest count updates. Use <span class="pill grey">In Use</span> to mark a table as occupied without adding to the rotation count.</p>
+        <p>Tap the number of guests (1–9). The table seats immediately and the server's count updates. Use <span class="pill grey">In Use</span> to mark a table occupied without counting it in the rotation.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-body">
-        <strong>Clear when the table is done</strong>
-        <p>Tap the table again, then tap <span class="pill red">Clear</span>. The table resets to open.</p>
+        <strong>Clear when done</strong>
+        <p>Tap the table again and tap <span class="pill red">Clean</span>. The table resets to open.</p>
       </div>
     </div>
   </div>
-
   <div class="callout tip" style="margin-top:16px;">
     <div class="callout-icon">💡</div>
-    <div>The timer in the modal shows how long the current party has been seated — useful for checking table turns.</div>
+    <div>The timer in the modal shows how long the current party has been seated.</div>
+  </div>
+</div>
+
+<!-- TRANSFER -->
+<div class="section">
+  <div class="section-label">Transferring a Table</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Tap the seated table</strong>
+        <p>Open the table modal on any table that is already seated.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Tap <span class="pill blue">Transfer</span></strong>
+        <p>A server picker appears listing all active servers. Tap the server to move the table to.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Done</strong>
+        <p>The table changes colour to the new server's section. Guest counts on both servers adjust automatically.</p>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2941,15 +2933,15 @@ hr {
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-body">
-        <strong>Drop it next to another table</strong>
-        <p>When close enough, it will snap and connect. A dashed border appears around the group.</p>
+        <strong>Drop next to another table</strong>
+        <p>When close enough it snaps and connects. A dashed border appears around the group.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-body">
         <strong>Seat the group</strong>
-        <p>Tap any table in the group. If it spans two servers, you'll be asked for each server's guest count separately. Tap <span class="pill red">Clear</span> to unlink and reset positions.</p>
+        <p>Tap any table in the group. If it spans two servers you'll be asked for each server's count separately. Tap <span class="pill red">Clean</span> to unlink and reset positions.</p>
       </div>
     </div>
   </div>
@@ -2958,34 +2950,39 @@ hr {
 <!-- ROTATION -->
 <div class="section">
   <div class="section-label">Managing the Rotation</div>
-
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
       <div class="step-body">
         <strong>Next Up is automatic</strong>
-        <p>The server with the fewest guests is always shown as Next Up. You don't need to track this manually.</p>
+        <p>The server with the fewest guests is always highlighted. You don't need to track this manually.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-body">
-        <strong>Adjust guest counts manually</strong>
-        <p>Use the <span class="pill grey">−</span> and <span class="pill grey">+</span> buttons beside each server's score to correct any count errors.</p>
+        <strong>Full section — auto skip</strong>
+        <p>If all of a server's tables are seated, they show <span class="pill grey">⬛ FULL — AUTO SKIP</span> and are automatically skipped in the rotation (getting +1 each time they're passed).</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Adjust counts manually</strong>
+        <p>Use the <span class="pill grey">−</span> and <span class="pill grey">+</span> buttons beside each server's score to fix any errors.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
       <div class="step-body">
         <strong>Select a server manually</strong>
         <p>Tap a server row to highlight it. The next table seated will go to that server. Tap again to deselect.</p>
       </div>
     </div>
   </div>
-
   <div class="callout info" style="margin-top:16px;">
     <div class="callout-icon">ℹ️</div>
-    <div>Tap the <strong>+ Seat</strong> button at the bottom of the rotation panel to log a walk-in or carry-out to the next server without using a table.</div>
+    <div>Tap <strong>+ Seat</strong> at the bottom of the rotation panel to log a walk-in or carry-out to the next server without using a table.</div>
   </div>
 </div>
 
@@ -2996,23 +2993,81 @@ hr {
     <div class="step">
       <div class="step-num">1</div>
       <div class="step-body">
-        <strong>Mark on break</strong>
-        <p>Tap the <span class="pill orange">☕</span> button beside a server's name and confirm. They will be skipped in the rotation and shown as <span class="pill orange">☕ ON BREAK</span>.</p>
+        <strong>Tap the ☕ break button</strong>
+        <p>Beside each server's name. Choose the break type:</p>
+        <p><span class="pill orange">🍽 Meal Break</span> ~30 min — server is fully removed from rotation. On return their count resets to the group average.</p>
+        <p style="margin-top:6px;"><span class="pill orange">☕ Coffee Break</span> ~10 min — server is removed from rotation but their count stays the same. Each time they would have been next they get +1 automatically to stay in fair order.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-body">
-        <strong>Seating their tables while on break</strong>
-        <p>If a guest sits in a break server's section, tap the table and you'll be prompted to assign it to a different server. That server gets the rotation credit and the table changes colour to theirs.</p>
+        <strong>Tables while on break</strong>
+        <p>Tap any table in a break server's section to assign it to another server. That server gets the count and the table changes to their colour.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-body">
         <strong>Return from break</strong>
-        <p>Tap <span class="pill orange">☕</span> again and confirm. Their guest count is automatically set to the average of all active servers so they re-enter the rotation fairly.</p>
+        <p>Tap the ☕/🍽 button again and confirm. The server re-enters the rotation.</p>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- CUTTING SERVERS -->
+<div class="section">
+  <div class="section-label">Cutting Servers</div>
+  <p style="color:var(--dim);font-size:14px;margin-bottom:16px;">Use this when a server is going home before the shift ends.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Tap the ✂ button</strong>
+        <p>Beside the server's name in the rotation panel. Three options appear:</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">★</div>
+      <div class="step-body">
+        <strong>Replace with New Server</strong>
+        <p>A name picker opens. The new server takes over the same section and starts at the group average count. The cut server's existing tables turn <strong>amber-brown</strong>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">↓</div>
+      <div class="step-body">
+        <strong>Cut &amp; Auto-Replace</strong>
+        <p>The bottom server in the rotation automatically moves into this section. Their tables recolour. No choices needed.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">↔</div>
+      <div class="step-body">
+        <strong>Choose Replacement</strong>
+        <p>Pick which existing server moves into this section. Their tables recolour and they keep their guest count.</p>
+      </div>
+    </div>
+  </div>
+  <div class="callout tip" style="margin-top:16px;">
+    <div class="callout-icon">💡</div>
+    <div>Cut servers appear in the <strong>▼ CUT SERVERS</strong> list at the bottom of the rotation panel. Tap to expand it. Their amber-brown tables are still tracked until cleared.</div>
+  </div>
+</div>
+
+<!-- CLEAR OPTIONS -->
+<div class="section">
+  <div class="section-label">The Clear Button</div>
+  <p style="color:var(--dim);font-size:14px;margin-bottom:16px;">Tap <span class="pill red">✕ Clear</span> in the top bar for two options:</p>
+  <div class="grid2">
+    <div class="card">
+      <h3>✕ New Day — Clear All</h3>
+      <p>Requires manager password. Resets everything — all tables, counts, servers, cut history — and returns to 2 servers. You'll be asked to pick names for the starting two servers.</p>
+    </div>
+    <div class="card">
+      <h3>↺ Reset Guest Counts</h3>
+      <p>No password. Zeroes every server's guest count. Tables stay seated, server names stay the same. Use this to rebalance the rotation after a busy rush.</p>
     </div>
   </div>
 </div>
@@ -3022,82 +3077,68 @@ hr {
   <div class="section-label">Multiple iPads &amp; Sync</div>
   <div class="card" style="margin-bottom:12px;">
     <h3><span class="dot" style="background:#3FBD5A;"></span>Green dot — Synced</h3>
-    <p>All changes are live across every iPad. What one person does, everyone sees within a couple of seconds.</p>
+    <p>All changes are live across every iPad within a couple of seconds.</p>
   </div>
   <div class="card">
     <h3><span class="dot" style="background:#E84040;"></span>Red dot — Offline</h3>
-    <p>No internet connection. The app still works locally — changes will sync automatically when the connection returns.</p>
+    <p>No internet. The app still works locally and syncs automatically when the connection returns.</p>
   </div>
   <div class="callout info" style="margin-top:12px;">
     <div class="callout-icon">ℹ️</div>
-    <div>The app saves automatically. If the iPad restarts or the app is closed, everything will be right where you left it when you reopen it.</div>
+    <div>The app saves automatically. If the iPad restarts, everything will be right where you left it.</div>
   </div>
 </div>
 
-<!-- HEADER BUTTONS -->
+<!-- REFERENCE TABLE -->
 <div class="section">
   <div class="section-label">Header Buttons Reference</div>
   <div style="background:var(--surf);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
     <table class="ref-table">
       <thead>
-        <tr>
-          <th>Button</th>
-          <th>What it does</th>
-        </tr>
+        <tr><th>Button</th><th>What it does</th></tr>
       </thead>
       <tbody>
-        <tr>
-          <td>− / + Servers</td>
-          <td>Decrease or increase the number of servers on the floor. Updates the floor map sections instantly.</td>
-        </tr>
-        <tr>
-          <td>↩ Undo</td>
-          <td>Reverses the last action (seating, clearing, score change). Turns gold when available.</td>
-        </tr>
-        <tr>
-          <td>↪ Redo</td>
-          <td>Re-applies an action that was undone.</td>
-        </tr>
-        <tr>
-          <td>↩ Reset All Table Positions</td>
-          <td>Returns all moved/joined tables to their original positions. Does not affect seating.</td>
-        </tr>
-        <tr>
-          <td>⏻ Logout</td>
-          <td>Returns to the password screen. The shift data is saved.</td>
-        </tr>
-        <tr>
-          <td>✕ Clear All</td>
-          <td>Requires the manager password. Resets the entire shift — all tables, guest counts, and daily totals.</td>
-        </tr>
+        <tr><td>− / + Servers</td><td>Remove or add a server on the floor. Removing a server moves them to the Cut Servers list with amber tables.</td></tr>
+        <tr><td>↩ Undo</td><td>Reverses the last action. Turns gold when available.</td></tr>
+        <tr><td>↪ Redo</td><td>Re-applies something that was undone.</td></tr>
+        <tr><td>↩ Reset Positions</td><td>Returns all moved/joined tables to their original spots. Doesn't affect seating.</td></tr>
+        <tr><td>⏻ Logout</td><td>Returns to the password screen. Shift data is saved.</td></tr>
+        <tr><td>✕ Clear</td><td>Opens the Clear Options menu — choose between a full day reset or just resetting guest counts.</td></tr>
       </tbody>
     </table>
   </div>
 </div>
 
-<!-- TIPS -->
+<!-- QUICK TIPS -->
 <div class="section">
   <div class="section-label">Quick Tips</div>
   <div class="steps">
     <div class="step">
       <div class="step-num">💡</div>
       <div class="step-body">
-        <strong>Rename servers</strong>
-        <p>Tap the server name in the rotation panel and type to rename. The name appears on the Next Up banner.</p>
+        <strong>Rename a server</strong>
+        <p>Tap the server's name in the rotation panel to open the name picker and choose a different name.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">💡</div>
       <div class="step-body">
-        <strong>Accidentally seated the wrong party size?</strong>
-        <p>Tap the table again, select the correct number, and tap <span class="pill gold">Update</span>. Or tap <span class="pill grey">↩ Undo</span> to reverse it entirely.</p>
+        <strong>Wrong party size?</strong>
+        <p>Tap the table, select the correct number, and tap <span class="pill gold">Update</span>. Or tap <span class="pill grey">↩ Undo</span> to reverse it entirely.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">💡</div>
+      <div class="step-body">
+        <strong>Server name list</strong>
+        <p>Names are managed inside the name picker. Tap <span class="pill gold">＋</span> to add a name. Tap <span class="pill red">✕ Remove</span>, enter the password, then tap the name to delete it.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">💡</div>
       <div class="step-body">
         <strong>Starting a new shift</strong>
-        <p>Ask your manager to tap <span class="pill red">✕ Clear All</span> and enter the password. This resets everything for the day.</p>
+        <p>Tap <span class="pill red">✕ Clear</span> → <strong>New Day — Clear All</strong> and enter the manager password.</p>
       </div>
     </div>
   </div>
