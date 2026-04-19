@@ -178,7 +178,8 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
 .pb.rp{padding:6px 0;font-size:12px;min-width:32px;border-radius:6px;}
 .pb.on{border-color:var(--accent);background:rgba(255,215,0,0.15);color:var(--accent);}
 .pb:active{transform:scale(.9);}
-.mbtns{display:flex;gap:7px;}
+.mbtns{display:flex;flex-direction:column;gap:7px;}
+.mbtns-row{display:flex;gap:7px;}
 .mbtn-p{flex:1;padding:12px;border-radius:9px;border:none;font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
 .mbtn-p:disabled{opacity:.28;cursor:not-allowed;}
 .mbtn-p:not(:disabled):active{opacity:.8;}
@@ -690,7 +691,7 @@ function showNamePicker(title, onPick, forceMode){
       const inUse = usedNames.has(n);
       const btn = document.createElement('button');
       btn.textContent = n;
-      btn.style.cssText = `width:100%;padding:10px 6px;border-radius:8px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;cursor:${inUse?'default':'pointer'};touch-action:manipulation;border:1px solid ${inUse?'rgba(255,255,255,0.06)':'rgba(255,255,255,0.14)'};background:${inUse?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.06)'};color:${inUse?'rgba(255,255,255,0.2)':'var(--text)'};`;
+      btn.style.cssText = `width:100%;padding:16px 6px;border-radius:10px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;cursor:${inUse?'default':'pointer'};touch-action:manipulation;border:1px solid ${inUse?'rgba(255,255,255,0.06)':'rgba(255,255,255,0.14)'};background:${inUse?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.06)'};color:${inUse?'rgba(255,255,255,0.2)':'var(--text)'};`;
       if(!inUse) btn.addEventListener('pointerup', ()=>{ overlay.style.display='none'; onPick(n); });
       list.appendChild(btn);
     });
@@ -717,7 +718,7 @@ function showNamePicker(title, onPick, forceMode){
         sorted.forEach(({n, origIdx}) => {
           const btn = document.createElement('button');
           btn.textContent = n;
-          btn.style.cssText = `width:100%;padding:10px 6px;border-radius:8px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation;border:1px solid rgba(255,80,80,0.35);background:rgba(255,80,80,0.08);color:rgba(255,130,130,0.9);`;
+          btn.style.cssText = `width:100%;padding:16px 6px;border-radius:10px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;border:1px solid rgba(255,80,80,0.35);background:rgba(255,80,80,0.08);color:rgba(255,130,130,0.9);`;
           btn.addEventListener('pointerup', ()=>{
             SERVER_NAME_LIST.splice(origIdx, 1);
             saveNameList();
@@ -806,7 +807,7 @@ function showTimePicker(serverName, onPick){
 
     const btn = document.createElement('button');
     btn.textContent = lbl;
-    btn.style.cssText = `width:100%;padding:12px 4px;border-radius:8px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;touch-action:manipulation;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.06);color:var(--text);`;
+    btn.style.cssText = `width:100%;padding:16px 4px;border-radius:10px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.06);color:var(--text);`;
     btn.addEventListener('pointerup', () => {
       overlay.style.display = 'none';
       onPick(val);
@@ -1982,15 +1983,22 @@ function openModal(id){
   const btns=document.getElementById('mbtns');
   const hasMoved = [...group].some(gid => st.movedPos[gid]);
   if(anySeated){
-    btns.innerHTML=`<button class="mbtn-p" id="mb-go" style="background:${c.bg};color:${c.tx}">Update</button>
+    const topRow = `<div class="mbtns-row">
+      <button class="mbtn-p" id="mb-go" style="background:${c.bg};color:${c.tx}">Update</button>
       <button class="mbtn-t" id="mb-tr">Transfer</button>
       <button class="mbtn-d" id="mb-cl">Clean</button>
-      ${hasMoved?`<button class="mbtn-g" id="mb-ret" style="font-size:11px;">↩</button>`:''}
-      <button class="mbtn-g" id="mb-cx">✕</button>`;
+    </div>`;
+    const bottomRow = `<div class="mbtns-row">
+      ${hasMoved?`<button class="mbtn-g" id="mb-ret" style="flex:1;font-size:13px;">↩ Reset Position</button>`:''}
+      <button class="mbtn-g" id="mb-cx" style="flex:1;font-size:13px;">✕ Cancel</button>
+    </div>`;
+    btns.innerHTML = topRow + bottomRow;
   } else {
-    btns.innerHTML=`<button class="mbtn-p" id="mb-go" style="background:${c.bg};color:${c.tx}" disabled>Seat</button>
+    btns.innerHTML=`<div class="mbtns-row">
+      <button class="mbtn-p" id="mb-go" style="background:${c.bg};color:${c.tx}" disabled>Seat</button>
       ${hasMoved?`<button class="mbtn-g" id="mb-ret" style="font-size:11px;">↩ Reset Position</button>`:''}
-      <button class="mbtn-g" id="mb-cx">Cancel</button>`;
+      <button class="mbtn-g" id="mb-cx">Cancel</button>
+    </div>`;
   }
   document.getElementById('mb-go').addEventListener('pointerup', doSeat);
   document.getElementById('mb-cx').addEventListener('pointerup', closeModal);
@@ -2002,8 +2010,15 @@ function openModal(id){
   });
   const ret=document.getElementById('mb-ret');
   if(ret) ret.addEventListener('pointerup', ()=>{
-    for(const gid of group){ delete st.movedPos[gid]; unlinkTable(gid); }
-    closeModal(); renderFloor(); renderStatus();
+    // Reset positions: unlink and clear move overrides.
+    // If any table in the group is seated, preserve the seated state — only
+    // move the table back to its default position.
+    for(const gid of group){
+      delete st.movedPos[gid];
+      unlinkTable(gid);
+    }
+    closeModal();
+    renderAll();
   });
 
   // Timer
@@ -2551,6 +2566,7 @@ renderAll(); // seeds undo stack via snapshotState inside renderAll
       _pointerDown = false;
       _pendingRender = false;
       _fbSyncing = false;
+      _fbPushPending = false;
       _renderScheduled = false;
       st._modalCooldown = false;
       closeModal && closeModal();
@@ -2609,8 +2625,21 @@ setInterval(() => {
   } else {
     _fbSyncingTs = 0;
   }
+  // Watchdog for _fbPushPending — if network totally hangs, this flag could
+  // stay true indefinitely and block all incoming polls. Force-clear after 10s.
+  if(_fbPushPending){
+    _fbPushPendingTs = _fbPushPendingTs || Date.now();
+    if(Date.now() - _fbPushPendingTs > 10000){
+      console.warn('[Firebase] Stale _fbPushPending — clearing');
+      _fbPushPending = false;
+      _fbPushPendingTs = 0;
+    }
+  } else {
+    _fbPushPendingTs = 0;
+  }
 }, 2000);
 let _fbSyncingTs = 0;
+let _fbPushPendingTs = 0;
 
 
 const FB_URL = 'https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app/shift';
@@ -2636,23 +2665,37 @@ function dbToState(data){
   }
 }
 
-// Write state to Firebase using REST PUT — debounced to coalesce rapid edits
+// Write state to Firebase using REST PUT — debounced to coalesce rapid edits.
+// Uses a "max wait" pattern: rapid successive calls still push at least every
+// 1.2s so we don't starve writes during sustained fast activity.
+let _fbPushFirstCall = 0;
 pushToFirebase = function(){
   if(_fbSyncing || !_fbReady) return;
+  const now = Date.now();
+  if(!_fbPushFirstCall) _fbPushFirstCall = now;
+  const forced = (now - _fbPushFirstCall) >= 1200;
   clearTimeout(_fbPushTimer);
+  const delay = forced ? 0 : 400;
   _fbPushTimer = setTimeout(()=>{
+    _fbPushTimer = null;
+    _fbPushFirstCall = 0;
     const body = JSON.stringify(stateToObj());
-    // Skip if identical to last successful poll result
     if(body === _lastPollData){ setSyncDot(true); return; }
+    _fbPushPending = true;
     fetch(FB_URL + '.json', {
       method: 'PUT',
       headers: {'Content-Type': 'application/json'},
       body: body
     })
-    .then(r => { if(r.ok){ _lastPollData = body; setSyncDot(true); } else setSyncDot(false); })
-    .catch(()=> setSyncDot(false));
-  }, 400);
+    .then(r => {
+      if(r.ok){ _lastPollData = body; setSyncDot(true); }
+      else setSyncDot(false);
+    })
+    .catch(()=> setSyncDot(false))
+    .finally(()=>{ _fbPushPending = false; });
+  }, delay);
 };
+let _fbPushPending = false;
 
 // Sync indicator dot
 const syncDot = document.createElement('div');
@@ -2683,7 +2726,10 @@ async function poll(){
       _pollFailures = 0;
       const asStr = JSON.stringify(data);
       if(asStr !== _lastPollData){
-        if(!_fbSyncing){
+        // CRITICAL: never overwrite local state while our own push is pending
+        // or in flight. Otherwise the server's pre-push data would clobber the
+        // edits that haven't round-tripped yet.
+        if(!_fbSyncing && !_fbPushPending && !_fbPushTimer){
           _lastPollData = asStr;
           dbToState(data);
         }
@@ -3050,7 +3096,7 @@ hr {
     <div class="guide-header">
   <div class="guide-title">⬡ Aulac Big Stop</div>
   <h1>Table Tracker<br>Staff Guide</h1>
-  <p>Everything you need to run the host stand — v1.2</p>
+  <p>Everything you need to run the host stand — v1.3</p>
 </div>
 
 <!-- GETTING STARTED -->
@@ -3075,7 +3121,14 @@ hr {
       <div class="step-num">3</div>
       <div class="step-body">
         <strong>Set the number of servers</strong>
-        <p>Tap <span class="pill grey">+</span> to add servers or <span class="pill grey">−</span> to remove them. You'll be prompted to pick a name from the list for each server added. The floor map redraws automatically.</p>
+        <p>Tap <span class="pill grey">+</span> to add servers or <span class="pill grey">−</span> to remove them. You'll pick a name from the list and a shift end time for each server added. The floor map redraws automatically.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <strong>Shift end time</strong>
+        <p>After picking a name, choose the server's expected end time from the 15-minute grid. This shows beside their name in the rotation panel. Tap <span class="pill grey">Skip</span> if you don't know yet — you can set it later by tapping their name to rename them.</p>
       </div>
     </div>
   </div>
@@ -3119,7 +3172,7 @@ hr {
       <div class="step-num">2</div>
       <div class="step-body">
         <strong>Select the party size</strong>
-        <p>Tap the number of guests (1–9). The table seats immediately and the server's count updates. Use <span class="pill grey">In Use</span> to mark a table occupied without counting it in the rotation.</p>
+        <p>Tap the number of guests (1–8). The table seats immediately and the server's count updates. Use <span class="pill grey">In Use</span> to mark a table occupied without counting it in the rotation.</p>
       </div>
     </div>
     <div class="step">
@@ -3227,24 +3280,24 @@ hr {
     <div class="step">
       <div class="step-num">1</div>
       <div class="step-body">
-        <strong>Tap the ☕ break button</strong>
-        <p>Beside each server's name. Choose the break type:</p>
-        <p><span class="pill orange">🍽 Meal Break</span> ~30 min — server is fully removed from rotation. On return their count resets to the group average.</p>
-        <p style="margin-top:6px;"><span class="pill orange">☕ Coffee Break</span> ~10 min — server is removed from rotation but their count stays the same. Each time they would have been next they get +1 automatically to stay in fair order.</p>
+        <strong>Tap the ☕ break button beside a server's name</strong>
+        <p>Choose the break type:</p>
+        <p style="margin-top:6px;"><span class="pill orange">🍽 Meal Break</span> &nbsp;~30 min — server is fully removed from the rotation. On return their count resets to the group average so they come back in fair order.</p>
+        <p style="margin-top:6px;"><span class="pill orange">☕ Coffee Break</span> &nbsp;~10 min — server stays in the rotation but is auto-skipped when they'd be next. Shows <span class="pill grey">☕ COFFEE — AUTO SKIP</span>. Each time they're skipped they get +1 so they stay in line and aren't handed a pile of tables when they return.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-body">
         <strong>Tables while on break</strong>
-        <p>Tap any table in a break server's section to assign it to another server. That server gets the count and the table changes to their colour.</p>
+        <p>If a table in their section needs seating while they're on break, tap it and you'll be prompted to assign it to another server. That server gets the count and the table changes to their colour.</p>
       </div>
     </div>
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-body">
         <strong>Return from break</strong>
-        <p>Tap the ☕/🍽 button again and confirm. The server re-enters the rotation.</p>
+        <p>Tap the ☕ / 🍽 button again and confirm. The server returns to normal rotation.</p>
       </div>
     </div>
   </div>
@@ -3350,8 +3403,8 @@ hr {
     <div class="step">
       <div class="step-num">💡</div>
       <div class="step-body">
-        <strong>Rename a server</strong>
-        <p>Tap the server's name in the rotation panel to open the name picker and choose a different name.</p>
+        <strong>Rename a server / update end time</strong>
+        <p>Tap the server's name in the rotation panel to open the name picker. After picking a name you'll be prompted for a new end time.</p>
       </div>
     </div>
     <div class="step">
@@ -3365,7 +3418,7 @@ hr {
       <div class="step-num">💡</div>
       <div class="step-body">
         <strong>Server name list</strong>
-        <p>Names are managed inside the name picker. Tap <span class="pill gold">＋</span> to add a name. Tap <span class="pill red">✕ Remove</span>, enter the password, then tap the name to delete it.</p>
+        <p>Names are managed inside the name picker. Tap <span class="pill gold">＋</span> to add a name. Tap <span class="pill red">✕ Remove</span>, enter the password, then tap a name to delete it.</p>
       </div>
     </div>
     <div class="step">
@@ -3373,6 +3426,13 @@ hr {
       <div class="step-body">
         <strong>Starting a new shift</strong>
         <p>Tap <span class="pill red">✕ Clear</span> → <strong>New Day — Clear All</strong> and enter the manager password.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">🛟</div>
+      <div class="step-body">
+        <strong>Emergency unstick — triple-tap the Aulac Big Stop logo</strong>
+        <p>If the app ever freezes (buttons don't respond, servers won't cut, floor won't update), triple-tap the <strong>Aulac Big Stop</strong> logo in the top-left. It resets internal locks and re-draws the screen. Safe to use anytime — doesn't affect shift data. Flashes green to confirm.</p>
       </div>
     </div>
   </div>
