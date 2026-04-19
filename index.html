@@ -1271,8 +1271,21 @@ function renderRot(){
 //   • all their non-stool tables are seated
 // Meal-break servers are NOT ticked (they're fully out of rotation until return).
 function tickCoffeeBreakServers(){
-  // Safety cap: prevents any theoretical infinite loop (e.g. if every server
-  // is coffee or full — in which case we stop once nothing more can be ticked).
+  // If there's no active (non-skipped, non-cut, non-meal-break) server
+  // available to take the next table, skip ticking entirely. When everyone
+  // is on break or full there's no rotation position to catch up to, and
+  // ticking would just inflate everyone's count pointlessly.
+  let hasActive = false;
+  for(let i = 1; i <= st.servers; i++){
+    if(st.cutServers.has(i)) continue;
+    if(st.onBreak.has(i))    continue; // any break excludes (coffee or meal)
+    if(isSecFullySeated(i))  continue;
+    hasActive = true;
+    break;
+  }
+  if(!hasActive) return;
+
+  // Safety cap: prevents any theoretical infinite loop.
   for(let pass = 0; pass < 50; pass++){
     // Collect rotation-eligible servers (exclude cut + meal-break)
     const candidates = [];
