@@ -850,6 +850,16 @@ document.getElementById('srv-picker-cancel').addEventListener('pointerup', ()=>{
 });
 
 // ── CUT SERVER LOGIC
+// Cap cutHistory length so a very long shift with many server changes can't
+// cause Firebase payloads to grow indefinitely and slow down sync.
+const CUT_HISTORY_MAX = 30;
+function pushCutHistory(rec){
+  st.cutHistory.push(rec);
+  if(st.cutHistory.length > CUT_HISTORY_MAX){
+    st.cutHistory = st.cutHistory.slice(-CUT_HISTORY_MAX);
+  }
+}
+
 function showCutModal(s){
   const name = st.names[s] || `Server ${s}`;
   document.getElementById('cut-modal-title').textContent = `✂  Cut ${name}`;
@@ -875,7 +885,7 @@ function showCutModal(s){
     showNamePicker(`NAME FOR REPLACEMENT IN SECTION ${s}`, (chosenName) => {
       showTimePicker(chosenName, (endTime) => {
       // Save old server's identity to cut history
-      st.cutHistory.push({ slot: s, name, guestCount: Math.round(secGuestScore(s)) });
+      pushCutHistory({ slot: s, name, guestCount: Math.round(secGuestScore(s)) });
       // Mark existing seated tables as cut, stamping the original server's name
       Object.keys(st.tables).forEach(tid => {
         const d = st.tables[+tid];
@@ -894,7 +904,7 @@ function showCutModal(s){
       st.onBreak.delete(s);
       if(st.selectedSec === s) st.selectedSec = null;
       snapshotState();
-      renderAll();
+      commitImmediate();
       }); // end showTimePicker
     });
   };
@@ -925,7 +935,7 @@ function executeReplaceWithExisting(s, name, replaceSec){
   const replaceCount = Math.round(secGuestScore(replaceSec));
 
   // 1 — Save cut server to history and amber its tables
-  st.cutHistory.push({ slot: s, name, guestCount: Math.round(secGuestScore(s)) });
+  pushCutHistory({ slot: s, name, guestCount: Math.round(secGuestScore(s)) });
   Object.keys(st.tables).forEach(tid => {
     const d = st.tables[+tid];
     if(tblSec(d, tid) === s) st.tables[+tid] = {...d, cutTable: true, seatedByName: name};
@@ -976,7 +986,7 @@ function executeReplaceWithExisting(s, name, replaceSec){
   if(st.selectedSec === s || st.selectedSec === replaceSec || st.selectedSec === last) st.selectedSec = null;
 
   snapshotState();
-  renderAll();
+  commitImmediate();
 }
 
 // ── ROTATION RENDER
@@ -2265,7 +2275,7 @@ function applyServerCount(newCount){
       // Add removed server to cut history
       const removedName  = st.names[s] || `Server ${s}`;
       const removedScore = Math.round(secGuestScore(s));
-      st.cutHistory.push({ slot: s, name: removedName, guestCount: removedScore });
+      pushCutHistory({ slot: s, name: removedName, guestCount: removedScore });
       // Mark their seated tables amber-brown
       Object.keys(st.tables).forEach(tid => {
         const d = st.tables[+tid];
@@ -2302,15 +2312,21 @@ function applyServerCount(newCount){
   st.selectedSec = null;
   document.getElementById('srv-count').textContent = newCount;
   clearUnassignedStools();
-  renderAll();
+  commitImmediate();
 }
 
 document.getElementById('srv-dec').addEventListener('pointerup', e=>{
   e.preventDefault();
   if(st.servers <= 2) return;
-  const s = st.servers;
+  // Capture the server count at tap-time for the confirm message only.
+  // The actual cut reads `st.servers` again inside the callback so it stays
+  // accurate even if another device changed the count while the dialog was up.
+  const s    = st.servers;
   const name = st.names[s] || `Server ${s}`;
-  showConfirm(`Cut ${name} from the floor?`, () => applyServerCount(s - 1));
+  showConfirm(`Cut ${name} from the floor?`, () => {
+    if(st.servers <= 2) return;             // another device already cut; nothing to do
+    applyServerCount(st.servers - 1);       // always cut the current last slot
+  });
 });
 
 // Keep − button visually disabled at minimum
@@ -2498,6 +2514,20 @@ function renderAll(){
   _renderSaveFlag = true;
   _renderSnapFlag = true;
   scheduleRender();
+}
+
+// Commit critical state changes (cuts, server count changes, clears) to
+// Firebase immediately with no debounce. This prevents a stale poll from
+// clobbering the change during the normal debounce window, which was causing
+// cuts to appear to "do nothing" after prolonged use when Firebase polls
+// were arriving frequently.
+function commitImmediate(){
+  renderAll();
+  // Fire the debounced push straight away by zeroing its start time then
+  // triggering — this makes the next invocation treat itself as "overdue"
+  // and flush on the current tick.
+  _fbPushFirstCall = Date.now() - 10000;
+  pushToFirebase();
 }
 
 // ── LOGIN SCREEN
