@@ -401,7 +401,6 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
       <button class="pb" data-n="3">3</button><button class="pb" data-n="4">4</button>
       <button class="pb" data-n="5">5</button><button class="pb" data-n="6">6</button>
       <button class="pb" data-n="7">7</button><button class="pb" data-n="8">8</button>
-      <button class="pb" data-n="9">9</button>
     </div>
     <div class="mbtns" id="mbtns"></div>
   </div>
@@ -2501,20 +2500,85 @@ function loadLocal(){
 loadLocal();
 renderAll(); // seeds undo stack via snapshotState inside renderAll
 
+// Emergency unstick: triple-tap the logo to force-reset all guards and re-render.
+// Use this if the app ever appears frozen (buttons don't respond, servers won't
+// cut, floor plan seems stuck). Safe to use at any time — doesn't affect state.
+(function setupLogoUnstick(){
+  const logo = document.getElementById('logo');
+  if(!logo) return;
+  let tapCount = 0;
+  let tapTimer = null;
+  logo.style.cursor = 'pointer';
+  logo.addEventListener('pointerup', () => {
+    tapCount++;
+    clearTimeout(tapTimer);
+    tapTimer = setTimeout(()=>{ tapCount = 0; }, 600);
+    if(tapCount >= 3){
+      tapCount = 0;
+      console.warn('[Unstick] Manual reset triggered');
+      _pointerDown = false;
+      _pendingRender = false;
+      _fbSyncing = false;
+      _renderScheduled = false;
+      st._modalCooldown = false;
+      closeModal && closeModal();
+      renderOnly();
+      // Brief visual confirmation
+      logo.style.transition = 'color .2s';
+      const orig = logo.style.color;
+      logo.style.color = '#3FBD5A';
+      setTimeout(()=>{ logo.style.color = orig; }, 400);
+    }
+  });
+})();
+
 
 // ── POINTER GUARD — prevents Firebase sync from destroying DOM elements mid-tap
-let _pointerDown   = false;
-let _pendingRender = false;
+let _pointerDown     = false;
+let _pointerDownTs   = 0;
+let _pendingRender   = false;
+const _POINTER_MAX_MS = 8000; // any tap longer than 8s is stale — force release
 
-document.addEventListener('pointerdown', () => { _pointerDown = true; }, {capture:true, passive:true});
-document.addEventListener('pointerup', () => {
+function _releasePointerGuard(){
   _pointerDown = false;
   if(_pendingRender){ _pendingRender = false; renderOnly(); }
+}
+
+document.addEventListener('pointerdown', () => {
+  _pointerDown = true;
+  _pointerDownTs = Date.now();
 }, {capture:true, passive:true});
-document.addEventListener('pointercancel', () => {
-  _pointerDown = false;
-  if(_pendingRender){ _pendingRender = false; renderOnly(); }
-}, {capture:true, passive:true});
+document.addEventListener('pointerup',     _releasePointerGuard, {capture:true, passive:true});
+document.addEventListener('pointercancel', _releasePointerGuard, {capture:true, passive:true});
+
+// Safety nets — if a pointerup is ever missed (tab switch mid-tap, system
+// modal, alert dialog, etc.) the guard would stay locked and the UI would
+// freeze on stale state until the app is restarted. These make sure it
+// always recovers.
+window.addEventListener('blur',            _releasePointerGuard);
+document.addEventListener('visibilitychange', () => {
+  if(document.hidden) _releasePointerGuard();
+});
+// Watchdog: if a tap has been held longer than 8 seconds it is certainly
+// stale — force release and flush any pending render.
+setInterval(() => {
+  if(_pointerDown && (Date.now() - _pointerDownTs) > _POINTER_MAX_MS){
+    console.warn('[Pointer] Stale pointer-down detected — releasing');
+    _releasePointerGuard();
+  }
+  // Also watchdog _fbSyncing — should never stay true longer than a few seconds
+  if(_fbSyncing){
+    _fbSyncingTs = _fbSyncingTs || Date.now();
+    if(Date.now() - _fbSyncingTs > 5000){
+      console.warn('[Firebase] Stale _fbSyncing — clearing');
+      _fbSyncing = false;
+      _fbSyncingTs = 0;
+    }
+  } else {
+    _fbSyncingTs = 0;
+  }
+}, 2000);
+let _fbSyncingTs = 0;
 
 
 const FB_URL = 'https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app/shift';
