@@ -998,7 +998,8 @@ function renderRot(){
     const breakIcon = isOnBreak ? (breakT === 'meal' ? '🍽' : '☕') : '☕';
     const isFull    = !isOnBreak && !st.cutServers.has(s) && isSecFullySeated(s);
     const row = document.createElement('div');
-    row.className = 'sec-row' + (isNext?' next-up':'') + (isOnBreak?' on-break':'');
+    const isMealBreak = isOnBreak && breakT === 'meal';
+    row.className = 'sec-row' + (isNext?' next-up':'') + (isMealBreak?' on-break':'');
     rowEls[s] = row;
 
     // Top line: badge + name
@@ -1012,7 +1013,8 @@ function renderRot(){
 
     const nameCol = document.createElement('div');
     nameCol.className = 'sec-name-col';
-    if(isOnBreak){ const bl=document.createElement('div');bl.className='next-lbl';bl.style.cssText='color:#FFA500;font-size:9px;letter-spacing:.5px;';bl.textContent=`${breakT==='meal'?'🍽':'☕'} ${breakT==='meal'?'MEAL':'COFFEE'} BREAK`;nameCol.appendChild(bl); }
+    if(isOnBreak && breakT === 'meal'){ const bl=document.createElement('div');bl.className='next-lbl';bl.style.cssText='color:#FFA500;font-size:9px;letter-spacing:.5px;';bl.textContent='🍽 MEAL BREAK';nameCol.appendChild(bl); }
+    else if(isOnBreak && breakT === 'coffee'){ const bl=document.createElement('div');bl.className='next-lbl';bl.style.cssText='color:#aaa;font-size:9px;letter-spacing:.5px;';bl.textContent='☕ COFFEE — AUTO SKIP';nameCol.appendChild(bl); }
     else if(isFull){ const fl=document.createElement('div');fl.className='next-lbl';fl.style.cssText='color:#aaa;font-size:9px;letter-spacing:.5px;';fl.textContent='⬛ FULL — AUTO SKIP';nameCol.appendChild(fl); }
     else if(st.newServers.has(s)){ const nl=document.createElement('div');nl.className='next-lbl';nl.textContent='★ NEW · NEXT UP';nameCol.appendChild(nl); }
     else if(isNext){ const nl=document.createElement('div');nl.className='next-lbl';nl.textContent='NEXT UP';nameCol.appendChild(nl); }
@@ -1107,6 +1109,8 @@ function renderRot(){
           modal.style.display = 'none';
           st.onBreak.add(s);
           st.breakType[s] = type;
+          // If this server is now the lowest but being auto-skipped, catch them up
+          if(type === 'coffee') tickCoffeeBreakServers();
           snapshotState(); renderRot();
         };
         document.getElementById('break-opt-meal').onpointerup   = () => doBreak('meal');
@@ -1256,26 +1260,54 @@ function renderRot(){
   updateSrvDecBtn();
 }
 
-// Add +1 to a skipped server only if they have the lowest guest count.
-// Two reasons a server gets skipped: coffee break, or all their tables already full.
+// Add +1 to every server that is being auto-skipped in the current rotation
+// pass. Runs repeatedly until the lowest-scored server is actually an active
+// one (so a coffee-break server with a much lower count gets caught up all at
+// once instead of being handed every subsequent table).
+//
+// A server is auto-skipped if they have the lowest score but:
+//   • they are on coffee break, or
+//   • all their non-stool tables are seated
+// Meal-break servers are NOT ticked (they're fully out of rotation until return).
 function tickCoffeeBreakServers(){
-  // Find the server with the lowest score (including skippable servers, excluding meal break & cut)
-  let minScore = Infinity, minSrv = null;
-  for(let i = 1; i <= st.servers; i++){
-    if(st.cutServers.has(i)) continue;
-    if(st.onBreak.has(i) && st.breakType[i] === 'meal') continue;
-    const sc = secGuestScore(i);
-    if(sc < minScore){ minScore = sc; minSrv = i; }
-  }
-  if(!minSrv) return;
-  // If that lowest server is on a coffee break, give them +1
-  if(st.onBreak.has(minSrv) && st.breakType[minSrv] === 'coffee'){
-    st.guestTotals[minSrv] = (st.guestTotals[minSrv] || 0) + 1;
-    return;
-  }
-  // If that lowest server's section is completely seated (all tables full), give them +1
-  if(isSecFullySeated(minSrv)){
-    st.guestTotals[minSrv] = (st.guestTotals[minSrv] || 0) + 1;
+  // Safety cap: prevents any theoretical infinite loop (e.g. if every server
+  // is coffee or full — in which case we stop once nothing more can be ticked).
+  for(let pass = 0; pass < 50; pass++){
+    // Collect rotation-eligible servers (exclude cut + meal-break)
+    const candidates = [];
+    for(let i = 1; i <= st.servers; i++){
+      if(st.cutServers.has(i)) continue;
+      if(st.onBreak.has(i) && st.breakType[i] === 'meal') continue;
+      candidates.push(i);
+    }
+    if(candidates.length === 0) return;
+
+    // Sort ascending by score; tie-break by slot
+    candidates.sort((a, b) => {
+      const da = secGuestScore(a), db = secGuestScore(b);
+      if(da !== db) return da - db;
+      return a - b;
+    });
+
+    // If the lowest-scored candidate is active, rotation is balanced — stop.
+    const low = candidates[0];
+    const lowIsCoffee = st.onBreak.has(low) && st.breakType[low] === 'coffee';
+    const lowIsFull   = !st.onBreak.has(low) && isSecFullySeated(low);
+    if(!lowIsCoffee && !lowIsFull) return;
+
+    // Otherwise: tick every skipped server tied for the bottom and loop again
+    let tickedAny = false;
+    for(const s of candidates){
+      const isCoffee = st.onBreak.has(s) && st.breakType[s] === 'coffee';
+      const isFull   = !st.onBreak.has(s) && isSecFullySeated(s);
+      if(isCoffee || isFull){
+        st.guestTotals[s] = (st.guestTotals[s] || 0) + 1;
+        tickedAny = true;
+      } else {
+        break; // first active server — stop for this pass
+      }
+    }
+    if(!tickedAny) return; // nothing to do
   }
 }
 
