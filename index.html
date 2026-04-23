@@ -2610,6 +2610,7 @@ renderAll(); // seeds undo stack via snapshotState inside renderAll
       _pendingRender = false;
       _fbSyncing = false;
       _fbPushPending = false;
+      _localDirty = false;
       _renderScheduled = false;
       st._modalCooldown = false;
       closeModal && closeModal();
@@ -2712,7 +2713,11 @@ function dbToState(data){
 // Uses a "max wait" pattern: rapid successive calls still push at least every
 // 1.2s so we don't starve writes during sustained fast activity.
 let _fbPushFirstCall = 0;
+let _lastPushedBody  = null;  // The state we last attempted to push (may differ from _lastPollData)
+let _localDirty      = false; // Set when local state changes; cleared when successfully pushed
+
 pushToFirebase = function(){
+  _localDirty = true;  // mark state as having pending changes
   if(_fbSyncing || !_fbReady) return;
   const now = Date.now();
   if(!_fbPushFirstCall) _fbPushFirstCall = now;
@@ -2723,7 +2728,7 @@ pushToFirebase = function(){
     _fbPushTimer = null;
     _fbPushFirstCall = 0;
     const body = JSON.stringify(stateToObj());
-    if(body === _lastPollData){ setSyncDot(true); return; }
+    _lastPushedBody = body;
     _fbPushPending = true;
     fetch(FB_URL + '.json', {
       method: 'PUT',
@@ -2731,10 +2736,21 @@ pushToFirebase = function(){
       body: body
     })
     .then(r => {
-      if(r.ok){ _lastPollData = body; setSyncDot(true); }
-      else setSyncDot(false);
+      if(r.ok){
+        _lastPollData  = body;        // server is now at `body`
+        _localDirty    = false;       // our push landed, local is clean
+        setSyncDot(true);
+      } else {
+        setSyncDot(false);
+        // Push failed — schedule a retry so we don't get stuck on the
+        // server's (possibly stale) version forever.
+        setTimeout(()=>{ if(_localDirty) pushToFirebase(); }, 2000);
+      }
     })
-    .catch(()=> setSyncDot(false))
+    .catch(()=> {
+      setSyncDot(false);
+      setTimeout(()=>{ if(_localDirty) pushToFirebase(); }, 2000);
+    })
     .finally(()=>{ _fbPushPending = false; });
   }, delay);
 };
@@ -2751,11 +2767,11 @@ function setSyncDot(ok){
 
 // Listen for changes by polling Firebase every 2 seconds (slower when hidden)
 let _lastPollData = null;
-let _pollBackoff  = 2000;           // ms between polls
+let _pollBackoff  = 2000;
 let _pollFailures = 0;
 
 function _nextPollDelay(){
-  if(document.hidden) return 10000;  // tab/app backgrounded → slow poll
+  if(document.hidden) return 10000;
   if(_pollFailures > 0) return Math.min(2000 * (2 ** _pollFailures), 30000);
   return _pollBackoff;
 }
@@ -2769,12 +2785,20 @@ async function poll(){
       _pollFailures = 0;
       const asStr = JSON.stringify(data);
       if(asStr !== _lastPollData){
-        // CRITICAL: never overwrite local state while our own push is pending
-        // or in flight. Otherwise the server's pre-push data would clobber the
-        // edits that haven't round-tripped yet.
-        if(!_fbSyncing && !_fbPushPending && !_fbPushTimer){
+        // Three reasons we should NOT apply server data to local state:
+        //   1. We're actively inside dbToState already (_fbSyncing)
+        //   2. A push is in flight (_fbPushPending) — server version is stale vs local
+        //   3. A push is queued (_fbPushTimer) — local has edits not yet sent
+        //   4. Local has unpushed changes (_localDirty) — e.g. push failed earlier
+        //      CRITICAL: without this check, a silently-failed push leaves us in a
+        //      loop where every poll overwrites our edits with the server's old data.
+        if(!_fbSyncing && !_fbPushPending && !_fbPushTimer && !_localDirty){
           _lastPollData = asStr;
           dbToState(data);
+        } else if(_localDirty && !_fbPushPending && !_fbPushTimer){
+          // We have unpushed changes but no push is scheduled — this can happen
+          // if a push failed and retry hasn't fired yet. Retry now.
+          pushToFirebase();
         }
       }
       _fbReady = true;
