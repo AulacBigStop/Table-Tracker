@@ -1603,15 +1603,39 @@ function mkZone(f,l,t,w,h,bg){const e=document.createElement('div');e.className=
 function mkLbl(f,l,t,w,txt,fs,vert){const e=document.createElement('div');e.className='zone-lbl';e.style.cssText=`left:${l}%;top:${t}%;width:${w}%;font-size:${fs}px;`+(vert?'writing-mode:vertical-rl;letter-spacing:2px;':'letter-spacing:2px;');e.textContent=txt;f.appendChild(e);}
 
 // ── IN-APP CONFIRM (replaces window.confirm which Safari blocks in standalone mode)
+// Robust handler management — avoids replaceWith/cloneNode tricks which can
+// leave stale listeners or ghost elements in rapid-fire scenarios.
+let _confirmActive = false;
 function showConfirm(msg, onYes){
+  if(_confirmActive){
+    console.warn('[Confirm] Already showing — ignoring new confirm');
+    return;
+  }
+  _confirmActive = true;
   const overlay = document.getElementById('confirm-overlay');
   document.getElementById('confirm-msg').textContent = msg;
   overlay.classList.add('open');
+
   const yes = document.getElementById('confirm-yes');
   const no  = document.getElementById('confirm-no');
-  function cleanup(){ overlay.classList.remove('open'); yes.replaceWith(yes.cloneNode(true)); no.replaceWith(no.cloneNode(true)); }
-  document.getElementById('confirm-yes').addEventListener('pointerup', ()=>{ cleanup(); onYes(); }, {once:true});
-  document.getElementById('confirm-no').addEventListener('pointerup',  ()=>{ cleanup(); },         {once:true});
+
+  function cleanup(){
+    overlay.classList.remove('open');
+    yes.removeEventListener('pointerup', handleYes);
+    no.removeEventListener('pointerup',  handleNo);
+    _confirmActive = false;
+  }
+  function handleYes(){
+    cleanup();
+    try { onYes(); }
+    catch(err) { console.error('[Confirm] Callback error:', err); }
+  }
+  function handleNo(){
+    cleanup();
+  }
+
+  yes.addEventListener('pointerup', handleYes);
+  no.addEventListener('pointerup',  handleNo);
 }
 
 let _capturedEl = null, _capturedPid = null;
@@ -2266,53 +2290,71 @@ document.querySelectorAll('.pb').forEach(b=>{
 
 
 function applyServerCount(newCount){
+  const origCount = st.servers;
+  console.log('[applyServerCount] Called with', newCount, 'current:', origCount);
   newCount = Math.max(2, Math.min(11, newCount));
-  if(newCount === st.servers) return;
+  if(newCount === st.servers){
+    console.warn('[applyServerCount] No-op: target equals current', newCount);
+    return;
+  }
   const oldCount = st.servers;
 
-  if(newCount < oldCount){
-    for(let s = newCount+1; s <= oldCount; s++){
-      // Add removed server to cut history
-      const removedName  = st.names[s] || `Server ${s}`;
-      const removedScore = Math.round(secGuestScore(s));
-      pushCutHistory({ slot: s, name: removedName, guestCount: removedScore });
-      // Mark their seated tables amber-brown
-      Object.keys(st.tables).forEach(tid => {
-        const d = st.tables[+tid];
-        const tSec = d.coverageSec || d.sec || secOf(+tid);
-        if(tSec === s) st.tables[+tid] = {...d, cutTable: true, seatedByName: removedName};
-      });
-      if(st.events) delete st.events[s];
-      st.newServers.delete(s);
-      st.onBreak.delete(s);
-    }
-    for(const [tid] of Object.entries(st.tables)){
-      let found = false;
-      for(let s=1; s<=newCount; s++){
-        if((L[newCount][s]||[]).includes(+tid)){ found=true; break; }
+  try {
+    if(newCount < oldCount){
+      for(let s = newCount+1; s <= oldCount; s++){
+        // Add removed server to cut history
+        const removedName  = st.names[s] || `Server ${s}`;
+        const removedScore = Math.round(secGuestScore(s));
+        pushCutHistory({ slot: s, name: removedName, guestCount: removedScore });
+        // Mark their seated tables amber-brown
+        Object.keys(st.tables).forEach(tid => {
+          const d = st.tables[+tid];
+          if(!d) return;
+          const tSec = d.coverageSec || d.sec || secOf(+tid);
+          if(tSec === s) st.tables[+tid] = {...d, cutTable: true, seatedByName: removedName};
+        });
+        if(st.events) delete st.events[s];
+        st.newServers.delete(s);
+        st.onBreak.delete(s);
       }
-      if(!found && !st.tables[tid]?.cutTable) delete st.tables[tid];
+      // Safely drop tables whose ID isn't in the new layout
+      if(L[newCount]){
+        for(const tid of Object.keys(st.tables)){
+          let found = false;
+          for(let s=1; s<=newCount; s++){
+            if((L[newCount][s]||[]).includes(+tid)){ found=true; break; }
+          }
+          if(!found && !st.tables[tid]?.cutTable) delete st.tables[tid];
+        }
+      }
+      if(st.selectedSec > newCount) st.selectedSec = null;
+    } else if(newCount > oldCount){
+      for(let s = oldCount+1; s <= newCount; s++){
+        let totalGuests = 0;
+        for(let x=1; x<=oldCount; x++) totalGuests += secGuestScore(x);
+        st.guestTotals[s] = oldCount > 0 ? Math.round(totalGuests / oldCount) : 0;
+        if(st.events && !st.events[s]) st.events[s] = [];
+        st.cutServers.delete(s);
+        st.onBreak.delete(s);
+        st.cutHistory = st.cutHistory.filter(r => r.slot !== s);
+      }
     }
-    if(st.selectedSec > newCount) st.selectedSec = null;
-  } else if(newCount > oldCount){
-    for(let s = oldCount+1; s <= newCount; s++){
-      // Always set to average of currently active servers
-      let totalGuests = 0;
-      for(let x=1; x<=oldCount; x++) totalGuests += secGuestScore(x);
-      st.guestTotals[s] = oldCount > 0 ? Math.round(totalGuests / oldCount) : 0;
-      if(st.events && !st.events[s]) st.events[s] = [];
-      // Clear any leftover cut state for this slot
-      st.cutServers.delete(s);
-      st.onBreak.delete(s);
-      st.cutHistory = st.cutHistory.filter(r => r.slot !== s);
-    }
-  }
 
-  st.servers = newCount;
-  st.selectedSec = null;
-  document.getElementById('srv-count').textContent = newCount;
-  clearUnassignedStools();
-  commitImmediate();
+    st.servers = newCount;
+    st.selectedSec = null;
+    const countEl = document.getElementById('srv-count');
+    if(countEl) countEl.textContent = newCount;
+    clearUnassignedStools();
+    commitImmediate();
+    console.log('[applyServerCount] Successfully changed servers:', origCount, '→', newCount);
+  } catch(err){
+    console.error('[applyServerCount] Error during cut:', err);
+    // Roll back to original state if something threw mid-operation
+    st.servers = origCount;
+    const countEl = document.getElementById('srv-count');
+    if(countEl) countEl.textContent = origCount;
+    alert('Could not complete cut — please try again or triple-tap the logo to reset.');
+  }
 }
 
 document.getElementById('srv-dec').addEventListener('pointerup', e=>{
@@ -2611,8 +2653,12 @@ renderAll(); // seeds undo stack via snapshotState inside renderAll
       _fbSyncing = false;
       _fbPushPending = false;
       _localDirty = false;
+      _confirmActive = false;
       _renderScheduled = false;
       st._modalCooldown = false;
+      // Close any open confirm overlay
+      const confirmOverlay = document.getElementById('confirm-overlay');
+      if(confirmOverlay) confirmOverlay.classList.remove('open');
       closeModal && closeModal();
       renderOnly();
       // Brief visual confirmation
