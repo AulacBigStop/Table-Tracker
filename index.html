@@ -33,10 +33,8 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
   color:#fff;font-size:20px;font-weight:700;cursor:pointer;line-height:1;padding:0;font-family:'IBM Plex Mono',monospace;}
 .srv-adj-btn:active{background:rgba(255,255,255,0.18);}
 #srv-count{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;color:#fff;min-width:22px;text-align:center;}
-#btn-logout{padding:6px 10px;border-radius:7px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:var(--dim);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'IBM Plex Sans',sans-serif;}
-#btn-logout:active{background:rgba(255,255,255,0.12);}
-#btn-clr{padding:6px 10px;border-radius:7px;border:1px solid rgba(255,80,80,0.3);background:rgba(255,80,80,0.07);color:#ff6060;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'IBM Plex Sans',sans-serif;}
-#btn-clr:active{background:rgba(255,80,80,0.2);}
+#btn-manager{padding:6px 10px;border-radius:7px;border:1px solid rgba(255,200,0,0.3);background:rgba(255,200,0,0.07);color:#ffc800;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'IBM Plex Sans',sans-serif;}
+#btn-manager:active{background:rgba(255,200,0,0.18);}
 #btn-reset-pos{margin-left:auto;padding:6px 10px;border-radius:7px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:var(--dim);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'IBM Plex Sans',sans-serif;}
 #btn-reset-pos:active{background:rgba(255,255,255,0.12);}
 #btn-undo{padding:6px 10px;border-radius:7px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:var(--dim);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'IBM Plex Sans',sans-serif;transition:background .15s,color .15s,border-color .15s;}
@@ -115,23 +113,31 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .sec-name-inp:focus{border-bottom-color:var(--accent);}
 
-/* bottom line: − score + */
-.sec-row-bot{display:flex;align-items:center;gap:3px;}
+/* bottom line: break (far left) · score (centre) · cut (far right) */
+.sec-row-bot{display:flex;align-items:center;gap:4px;}
 .sec-score{flex:1;font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:700;text-align:center;}
+/* sec-adj-btn kept for the Adjust Counts manager modal */
 .sec-adj-btn{flex:0 0 34px;height:30px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);
   background:rgba(255,255,255,0.06);color:var(--dim);font-size:18px;line-height:1;
   cursor:pointer;padding:0;font-family:'IBM Plex Mono',monospace;font-weight:700;}
 .sec-adj-btn:active{background:rgba(255,255,255,0.14);}
+/* Adjust Counts modal rows */
+.adj-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.07);}
+.adj-row:last-child{border-bottom:none;}
+.adj-badge{width:24px;min-width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;
+  font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;flex-shrink:0;}
+.adj-name{flex:1;font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.adj-count{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;min-width:40px;text-align:center;}
 .sec-row.on-break{opacity:1;background:rgba(255,165,0,0.07);outline:1.5px solid rgba(255,165,0,0.25);border-radius:6px;}
 .sec-row.on-break .sec-badge{opacity:0.4;filter:grayscale(1);}
 .sec-row.on-break .sec-name-inp{opacity:0.45;text-decoration:line-through;}
 .sec-row.on-break .sec-score{opacity:0.35;}
 .sec-row.on-break .sec-adj-btn{opacity:0.3;pointer-events:none;}
-.break-btn{flex:0 0 26px;height:26px;border-radius:5px;border:1px solid rgba(255,255,255,0.12);
+.break-btn{flex:0 0 52px;height:36px;border-radius:5px;border:1px solid rgba(255,255,255,0.12);
   background:rgba(255,255,255,0.04);color:var(--dim);font-size:13px;line-height:1;
   cursor:pointer;padding:0;margin-left:2px;}
 .break-btn.active{background:rgba(255,165,0,0.25);color:#FFA500;border-color:rgba(255,165,0,0.6);box-shadow:0 0 6px rgba(255,165,0,0.3);}
-.cut-btn{flex:0 0 26px;height:26px;border-radius:5px;border:1px solid rgba(255,80,80,0.2);
+.cut-btn{flex:0 0 52px;height:36px;border-radius:5px;border:1px solid rgba(255,80,80,0.2);
   background:rgba(255,80,80,0.05);color:rgba(255,100,100,0.55);font-size:12px;line-height:1;
   cursor:pointer;padding:0;margin-left:2px;font-weight:700;}
 .sec-row.cut-server{opacity:0.5;background:rgba(255,80,80,0.05);outline:1px solid rgba(255,80,80,0.18);border-radius:6px;}
@@ -152,7 +158,7 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
 .act-d{background:rgba(180,130,255,0.14);color:#b482ff;border:1.5px solid rgba(180,130,255,0.38);}
 
 /* TABLE SEAT MODAL */
-#confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:600;align-items:center;justify-content:center;}
+#confirm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:10001;align-items:center;justify-content:center;}
 #confirm-overlay.open{display:flex;}
 #confirm-box{background:#17171f;border:1px solid rgba(255,255,255,0.11);border-radius:14px;padding:20px;width:min(280px,88vw);
   display:flex;flex-direction:column;gap:14px;align-items:center;}
@@ -194,12 +200,42 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
 
 /* iOS tap delay fix */
 button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
-#btn-undo, #btn-redo, #btn-reset-pos, #btn-logout, #btn-clr,
-#confirm-yes, #confirm-no, #pwd-confirm, #pwd-cancel, #login-btn {
+#btn-undo, #btn-redo, #btn-reset-pos, #btn-manager,
+#confirm-yes, #confirm-no, #pwd-confirm, #pwd-cancel, #login-btn,
+#adjust-counts-done, #mgr-opt-adjust, #mgr-opt-clear, #mgr-opt-counts, #mgr-opt-logout, #mgr-modal-cancel,
+#mgr-opt-reports, #mgr-opt-names, #edit-names-add, #edit-names-done,
+#reports-close, .rpt-tab, .rpt-server-row, #rpt-back-btn {
   touch-action: manipulation;
   -webkit-user-select: none;
   user-select: none;
 }
+
+/* ── REPORTS MODAL */
+#reports-modal{background:#12121a;flex-direction:column;}
+.rpt-hdr{display:flex;align-items:center;padding:16px 16px 0;flex-shrink:0;}
+.rpt-title{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:#ffc800;flex:1;letter-spacing:.5px;}
+#reports-close{background:none;border:1px solid rgba(255,255,255,.12);color:var(--dim);font-size:16px;width:34px;height:34px;border-radius:8px;cursor:pointer;padding:0;font-family:'IBM Plex Mono',monospace;}
+.rpt-tabs{display:flex;gap:6px;padding:12px 16px;flex-shrink:0;}
+.rpt-tab{flex:1;padding:9px 0;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.3px;}
+.rpt-tab.active{background:rgba(255,200,0,.12);border-color:rgba(255,200,0,.35);color:#ffc800;}
+#reports-content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 12px 16px;}
+.rpt-server-row{display:flex;align-items:center;gap:10px;padding:12px 10px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);margin-bottom:8px;cursor:pointer;}
+.rpt-server-row:active{background:rgba(255,255,255,.07);}
+.rpt-srv-badge{width:28px;min-width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;flex-shrink:0;}
+.rpt-srv-name{flex:1;font-size:14px;font-weight:600;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rpt-srv-stats{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;}
+.rpt-stat-main{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:var(--text);}
+.rpt-stat-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim);}
+.rpt-back{display:flex;align-items:center;gap:8px;padding:8px 0 14px;color:var(--dim);font-size:13px;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-weight:600;}
+.rpt-period-label{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;color:var(--dim);letter-spacing:1px;margin-bottom:8px;}
+.rpt-summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
+.rpt-summary-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 8px;text-align:center;}
+.rpt-summary-val{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;color:var(--text);}
+.rpt-summary-lbl{font-size:9px;font-weight:600;color:var(--dim);letter-spacing:.5px;margin-top:2px;}
+.rpt-shift-hdr{display:grid;grid-template-columns:1fr 48px 48px 58px;gap:0;padding:6px 8px;font-size:9px;font-weight:700;color:var(--dim);letter-spacing:.5px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:4px;font-family:'IBM Plex Mono',monospace;}
+.rpt-shift-row{display:grid;grid-template-columns:1fr 48px 48px 58px;gap:0;padding:9px 8px;border-radius:7px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);}
+.rpt-shift-row:nth-child(odd){background:rgba(255,255,255,.03);}
+.rpt-no-data{text-align:center;color:var(--dim);font-size:13px;padding:40px 0;font-family:'IBM Plex Mono',monospace;line-height:1.8;}
 </style>
 </head>
 <body>
@@ -238,8 +274,7 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
   <button id="btn-undo" disabled>↩ Undo</button>
   <button id="btn-redo" disabled>↪ Redo</button>
   <button id="btn-reset-pos">↩ Reset All Table Positions</button>
-  <button id="btn-logout">⏻ Logout</button>
-  <button id="btn-clr">✕ Clear</button>
+  <button id="btn-manager">⚙ Manager</button>
 </div>
 
 <div id="main">
@@ -352,23 +387,82 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
   </div>
 </div>
 
-<!-- CLEAR OPTIONS MODAL -->
-<div id="clear-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:700;align-items:center;justify-content:center;">
-  <div style="background:#17171f;border:1px solid rgba(255,255,255,0.11);border-radius:14px;padding:22px;width:min(320px,92vw);display:flex;flex-direction:column;gap:10px;">
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:#ff8080;letter-spacing:.5px;">CLEAR OPTIONS</div>
-    <button id="clear-opt-all" style="padding:14px 16px;border-radius:10px;border:1px solid rgba(255,80,80,0.3);background:rgba(255,80,80,0.07);color:#ff8080;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;text-align:left;">
-      ✕ New Day — Clear All<br>
-      <span style="font-size:10px;opacity:.6;font-weight:400;">Resets everything · returns to 2 servers · requires password</span>
+<!-- MANAGER MENU MODAL -->
+<div id="manager-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:700;align-items:center;justify-content:center;">
+  <div style="background:#17171f;border:1px solid rgba(255,200,0,0.22);border-radius:14px;padding:22px;width:min(340px,94vw);display:flex;flex-direction:column;gap:10px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:#ffc800;letter-spacing:.5px;">⚙ MANAGER MENU</div>
+    <button id="mgr-opt-reports" style="padding:14px 16px;border-radius:10px;border:1px solid rgba(100,200,255,0.25);background:rgba(100,200,255,0.06);color:#7dd8f8;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;text-align:left;">
+      📊 Server Reports<br>
+      <span style="font-size:10px;opacity:.6;font-weight:400;">Guests · tables · avg turn time · per shift breakdown</span>
     </button>
-    <button id="clear-opt-counts" style="padding:14px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;text-align:left;">
+    <button id="mgr-opt-names" style="padding:14px 16px;border-radius:10px;border:1px solid rgba(255,200,0,0.25);background:rgba(255,200,0,0.06);color:#ffc800;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;text-align:left;">
+      ✏ Edit Server Names<br>
+      <span style="font-size:10px;opacity:.6;font-weight:400;">Add or remove names from the master list</span>
+    </button>
+    <button id="mgr-opt-adjust" style="padding:14px 16px;border-radius:10px;border:1px solid rgba(255,200,0,0.25);background:rgba(255,200,0,0.06);color:#ffc800;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;text-align:left;">
+      ✏ Adjust Guest Counts<br>
+      <span style="font-size:10px;opacity:.6;font-weight:400;">Manually set each server's count · rebalances rotation immediately</span>
+    </button>
+    <button id="mgr-opt-clear" style="padding:14px 16px;border-radius:10px;border:1px solid rgba(255,80,80,0.3);background:rgba(255,80,80,0.07);color:#ff8080;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;text-align:left;">
+      ✕ New Day — Clear All<br>
+      <span style="font-size:10px;opacity:.6;font-weight:400;">Resets everything · returns to 2 servers · picks new server names</span>
+    </button>
+    <button id="mgr-opt-counts" style="padding:14px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;text-align:left;">
       ↺ Reset Guest Counts<br>
       <span style="font-size:10px;opacity:.6;font-weight:400;">Zeroes all counts · keeps tables & servers · rebalances rotation</span>
     </button>
-    <button id="clear-modal-cancel" style="padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;touch-action:manipulation;">Cancel</button>
+    <button id="mgr-opt-logout" style="padding:14px 16px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;text-align:left;">
+      ⏻ Logout<br>
+      <span style="font-size:10px;opacity:.6;font-weight:400;">Returns to the login screen · state is preserved</span>
+    </button>
+    <button id="mgr-modal-cancel" style="padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;touch-action:manipulation;">Cancel</button>
   </div>
 </div>
 
-<!-- PASSWORD MODAL -->
+<!-- REPORTS MODAL (full-screen, manager only) -->
+<div id="reports-modal" style="display:none;position:fixed;inset:0;z-index:900;">
+  <div class="rpt-hdr">
+    <div class="rpt-title">📊 SERVER REPORTS</div>
+    <button id="reports-close">✕</button>
+  </div>
+  <div class="rpt-tabs">
+    <button class="rpt-tab" data-period="today">Today</button>
+    <button class="rpt-tab" data-period="week">This Week</button>
+    <button class="rpt-tab active" data-period="all">All Time</button>
+    <button class="rpt-tab" data-period="custom">Custom</button>
+  </div>
+  <div id="rpt-custom-row" style="display:none;padding:0 16px 10px;gap:8px;align-items:center;flex-shrink:0;">
+    <input type="date" id="rpt-from" style="flex:1;padding:9px 10px;border-radius:8px;border:1px solid rgba(255,200,0,0.3);background:rgba(255,255,255,0.05);color:#eee;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;outline:none;-webkit-appearance:none;">
+    <span style="color:var(--dim);font-size:12px;font-family:'IBM Plex Mono',monospace;flex-shrink:0;">to</span>
+    <input type="date" id="rpt-to" style="flex:1;padding:9px 10px;border-radius:8px;border:1px solid rgba(255,200,0,0.3);background:rgba(255,255,255,0.05);color:#eee;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;outline:none;-webkit-appearance:none;">
+  </div>
+  <div id="reports-content"></div>
+</div>
+
+<!-- EDIT SERVER NAMES MODAL (manager only — no extra password) -->
+<div id="edit-names-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:800;align-items:center;justify-content:center;">
+  <div style="background:#17171f;border:1px solid rgba(255,200,0,0.22);border-radius:14px;padding:20px;width:min(360px,94vw);max-height:88vh;display:flex;flex-direction:column;gap:0;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:#ffc800;letter-spacing:.5px;margin-bottom:14px;">✏ SERVER NAMES</div>
+    <div id="edit-names-list" style="overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;margin-bottom:12px;"></div>
+    <!-- Add row -->
+    <div style="display:flex;gap:7px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);">
+      <input id="edit-names-input" type="text" placeholder="Add new name…" maxlength="20"
+        style="flex:1;padding:10px;border-radius:8px;border:1px dashed rgba(255,215,0,0.3);background:rgba(255,215,0,0.04);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none;">
+      <button id="edit-names-add" style="padding:10px 14px;border-radius:8px;border:1px solid rgba(255,215,0,0.35);background:rgba(255,215,0,0.1);color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;cursor:pointer;touch-action:manipulation;">＋</button>
+    </div>
+    <button id="edit-names-done" style="margin-top:10px;padding:12px;border-radius:9px;border:1px solid rgba(255,200,0,0.3);background:rgba(255,200,0,0.1);color:#ffc800;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;">Done</button>
+  </div>
+</div>
+
+<!-- ADJUST GUEST COUNTS MODAL (manager only) -->
+<div id="adjust-counts-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:800;align-items:center;justify-content:center;">
+  <div style="background:#17171f;border:1px solid rgba(255,200,0,0.22);border-radius:14px;padding:20px;width:min(340px,94vw);max-height:88vh;display:flex;flex-direction:column;gap:0;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:#ffc800;letter-spacing:.5px;margin-bottom:14px;">✏ ADJUST GUEST COUNTS</div>
+    <div id="adjust-counts-list" style="overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;"></div>
+    <button id="adjust-counts-done" style="margin-top:14px;padding:12px;border-radius:9px;border:1px solid rgba(255,200,0,0.3);background:rgba(255,200,0,0.1);color:#ffc800;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;">Done</button>
+  </div>
+</div>
+
 <div id="pwd-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10002;align-items:center;justify-content:center;">
   <div style="background:#17171f;border:1px solid rgba(255,255,255,0.11);border-radius:14px;padding:24px;width:min(280px,88vw);display:flex;flex-direction:column;gap:14px;align-items:center;">
     <div style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:#eee;">Enter Password</div>
@@ -490,6 +584,7 @@ const st = {
   cutServers: new Set(),   // servers cut without replacement (slot excluded from rotation)
   cutHistory: [],          // [{slot, name, guestCount}] — servers replaced in-place
   endTimes:   {},          // {serverNum: 'HH:MM'} — shift end time per server
+  shiftRecord:{},          // {name:{guests,turns[]}} — current-shift stats by server name
   selectedSec: null,
   rotMode: false,
   mTable:null, mParty:null, mGroup:null, mMultiSec:null, mMultiStep:0, mOverrideSec:null,
@@ -520,6 +615,7 @@ function stateToObj(){
     cutServers:  [...st.cutServers],
     cutHistory:  st.cutHistory,
     endTimes:    st.endTimes,
+    shiftRecord: st.shiftRecord,
     selectedSec: st.selectedSec ?? null,
     nameList:    SERVER_NAME_LIST
   };
@@ -580,6 +676,7 @@ function deserializeState(data){
   st.cutServers  = new Set(data.cutServers ?? []);
   st.cutHistory  = data.cutHistory ?? [];
   st.endTimes    = data.endTimes   ?? {};
+  st.shiftRecord = data.shiftRecord ?? {};
   st.selectedSec = data.selectedSec ?? null;
   if(data.nameList && Array.isArray(data.nameList) && data.nameList.length > 0){
     SERVER_NAME_LIST = data.nameList;
@@ -720,9 +817,11 @@ function showNamePicker(title, onPick, forceMode){
           btn.textContent = n;
           btn.style.cssText = `width:100%;padding:16px 6px;border-radius:10px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;border:1px solid rgba(255,80,80,0.35);background:rgba(255,80,80,0.08);color:rgba(255,130,130,0.9);`;
           btn.addEventListener('pointerup', ()=>{
+            const nameToDelete = n;
             SERVER_NAME_LIST.splice(origIdx, 1);
             saveNameList();
             pushToFirebase();
+            deleteServerHistory(nameToDelete); // remove from Firebase history
             renderList(); // back to normal mode
           });
           list.appendChild(btn);
@@ -1063,29 +1162,21 @@ function renderRot(){
     rowTop.appendChild(badge);
     rowTop.appendChild(nameCol);
 
-    // Bottom line: − score +
+    // Bottom line: break (far left) · score (centre, flex:1) · cut (far right)
     const rowBot = document.createElement('div');
     rowBot.className = 'sec-row-bot';
 
     const score = secGuestScore(s);
-    const btnMinus = document.createElement('button');
-    btnMinus.textContent = '−';
-    btnMinus.className = 'sec-adj-btn';
-    btnMinus.addEventListener('pointerup', ev => { ev.stopPropagation(); st.guestTotals[s]=Math.max(0,(st.guestTotals[s]||0)-1); snapshotState(); renderRot(); });
-
     const scoreEl = document.createElement('div');
     scoreEl.className = 'sec-score';
     scoreEl.style.color = isNext?'var(--accent)':score>0?'var(--text)':'var(--dim)';
     scoreEl.textContent = Math.round(score);
 
-    const btnPlus = document.createElement('button');
-    btnPlus.textContent = '+';
-    btnPlus.className = 'sec-adj-btn';
-    btnPlus.addEventListener('pointerup', ev => { ev.stopPropagation(); st.guestTotals[s]=(st.guestTotals[s]||0)+1; snapshotState(); renderRot(); });
-
-    rowBot.appendChild(btnMinus);
-    rowBot.appendChild(scoreEl);
-    rowBot.appendChild(btnPlus);
+    // Centre column: name/badge on top, score below
+    const rowCentre = document.createElement('div');
+    rowCentre.className = 'sec-row-centre';
+    rowCentre.appendChild(rowTop);
+    rowCentre.appendChild(rowBot);
 
     const btnBreak = document.createElement('button');
     btnBreak.textContent = breakIcon;
@@ -1129,7 +1220,10 @@ function renderRot(){
         document.getElementById('break-type-cancel').onpointerup = () => { modal.style.display = 'none'; };
       }
     });
+
+    // Assemble bottom row: break | score | cut
     rowBot.appendChild(btnBreak);
+    rowBot.appendChild(scoreEl);
 
     // ✂ Cut button (not shown for servers already cut)
     if(!st.cutServers.has(s)){
@@ -1342,7 +1436,7 @@ function addEvent(type, guests){
   if(!st.guestTotals[s]) st.guestTotals[s] = 0;
   const g = guests || (type==='S' ? 1 : type==='D' ? 1 : 3);
   st.guestTotals[s] += g;
-  if(type !== 'D'){ st.dailyGuests += g; }
+  if(type !== 'D'){ st.dailyGuests += g; recordShiftGuests(st.names[s] || `Server ${s}`, g); }
   st.dailyTables++;
   st.newServers.delete(s);
   st.selectedSec = null;
@@ -1357,7 +1451,7 @@ function addEventToSec(sec, type, guests){
   const g = guests || (type==='S' ? 1 : type==='D' ? 1 : 3);
   st.guestTotals[sec] += g;
   // Daily totals
-  if(type !== 'D'){ st.dailyGuests += g; }
+  if(type !== 'D'){ st.dailyGuests += g; recordShiftGuests(st.names[sec] || `Server ${sec}`, g); }
   st.dailyTables++;
   st.newServers.delete(sec);
   tickCoffeeBreakServers();
@@ -2127,8 +2221,15 @@ function openModalStep(){
 function doSeatTable(id, party, secOverride){
   const prevParty = st.tables[id]?.party || null;
   const prevSeatedAt = st.tables[id]?.seatedAt || null;
+  const prevSeatedByName = st.tables[id]?.seatedByName || null;
   const s = secOverride || secOf(id);
-  st.tables[id] = {party, seatedAt: prevParty ? prevSeatedAt : Date.now(), sec: s};
+  const isNewSeat = !prevParty && party > 0;
+  st.tables[id] = {
+    party,
+    seatedAt: prevParty ? prevSeatedAt : Date.now(),
+    sec: s,
+    ...(isNewSeat ? {seatedByName: st.names[s]||`Server ${s}`} : (prevSeatedByName ? {seatedByName: prevSeatedByName} : {}))
+  };
   if(s && party !== 0){
     if(!prevParty){
       const type = party===1 ? 'S' : party>=5 ? 'XL' : 'X';
@@ -2176,7 +2277,18 @@ function doSeat(){
     const prevParty = [...group].map(gid=>st.tables[gid]?.party).find(p=>p!==undefined)??null;
     const prevSeatedAt = [...group].map(g=>st.tables[g]?.seatedAt).find(t=>t) || Date.now();
     const effectiveSec = st.mOverrideSec || secOf(primary);
-    for(const gid of ids) st.tables[gid] = {party: st.mParty, seatedAt: prevParty ? prevSeatedAt : Date.now(), sec: effectiveSec, ...(st.mOverrideSec ? {coverageSec: st.mOverrideSec} : {})};
+    const isNewSeat = !prevParty && st.mParty > 0;
+    const sName = st.names[effectiveSec] || `Server ${effectiveSec}`;
+    for(const gid of ids){
+      const prev = st.tables[gid];
+      st.tables[gid] = {
+        party: st.mParty,
+        seatedAt: prevParty ? prevSeatedAt : Date.now(),
+        sec: effectiveSec,
+        ...(st.mOverrideSec ? {coverageSec: st.mOverrideSec} : {}),
+        ...(isNewSeat ? {seatedByName: sName} : (prev?.seatedByName ? {seatedByName: prev.seatedByName} : {}))
+      };
+    }
     const s = effectiveSec;
     if(s && st.mParty !== 0 && !prevParty){
       const type = st.mParty===1 ? 'S' : st.mParty>=5 ? 'XL' : 'X';
@@ -2217,7 +2329,7 @@ function doTransfer(group){
     for(const gid of group){
       const d = st.tables[gid];
       if(!d) continue;
-      st.tables[gid] = {...d, sec: newSec, coverageSec: newSec};
+      st.tables[gid] = {...d, sec: newSec, coverageSec: newSec, seatedByName: st.names[newSec]||`Server ${newSec}`};
     }
     snapshotState();
     renderAll();
@@ -2227,6 +2339,12 @@ function doTransfer(group){
 function doClear(){
   const group = st.mGroup || new Set([st.mTable]);
   for(const gid of group){
+    const d = st.tables[gid];
+    // Record turn time for this table before clearing
+    if(d && d.party > 0 && d.seatedAt){
+      const name = d.seatedByName || st.names[d.coverageSec != null ? +d.coverageSec : d.sec] || null;
+      if(name) recordShiftTurn(name, d.seatedAt);
+    }
     delete st.tables[gid];
     delete st.movedPos[gid];
   }
@@ -2252,7 +2370,12 @@ document.querySelectorAll('.pb').forEach(b=>{
         const now = Date.now();
         for(const entry of st.mMultiSec){
           if(entry.party === null) continue;
-          for(const gid of entry.ids) st.tables[gid] = {party: entry.party, seatedAt: now, sec: entry.s};
+          const msSeatName = entry.party > 0 ? (st.names[entry.s]||`Server ${entry.s}`) : null;
+          for(const gid of entry.ids){
+            const rec = {party: entry.party, seatedAt: now, sec: entry.s};
+            if(msSeatName) rec.seatedByName = msSeatName;
+            st.tables[gid] = rec;
+          }
           if(entry.party !== 0){
             const type = entry.party===1?'S':entry.party>=5?'XL':'X';
             addEventToSec(entry.s, type, entry.party);
@@ -2394,14 +2517,6 @@ document.getElementById('srv-inc').addEventListener('pointerup', e=>{
 document.getElementById('btn-undo').addEventListener('pointerup', ()=>{ undoState(); });
 document.getElementById('btn-redo').addEventListener('pointerup', ()=>{ redoState(); });
 
-document.getElementById('btn-logout').addEventListener('pointerup', ()=>{
-  showConfirm('Log out?', ()=>{
-    sessionStorage.removeItem('tt_auth_v1');
-    document.getElementById('login-screen').style.display = 'flex';
-    setTimeout(()=>document.getElementById('login-input').focus(), 300);
-  });
-});
-
 document.getElementById('btn-reset-pos').addEventListener('pointerup', ()=>{
   showConfirm('Reset all table positions?', ()=>{
     st.movedPos = {};
@@ -2410,58 +2525,267 @@ document.getElementById('btn-reset-pos').addEventListener('pointerup', ()=>{
   });
 });
 
-document.getElementById('btn-clr').addEventListener('pointerup',()=>{
-  const modal = document.getElementById('clear-modal');
+// ── MANAGER MENU — single passcode gate, then three actions inside
+function showManagerMenu(){
+  const modal = document.getElementById('manager-modal');
   modal.style.display = 'flex';
-});
-document.getElementById('clear-modal-cancel').addEventListener('pointerup',()=>{
-  document.getElementById('clear-modal').style.display = 'none';
-});
+}
+function closeManagerMenu(){
+  document.getElementById('manager-modal').style.display = 'none';
+}
 
-// Option 1: New Day — full reset with password
-document.getElementById('clear-opt-all').addEventListener('pointerup',()=>{
-  document.getElementById('clear-modal').style.display = 'none';
+document.getElementById('btn-manager').addEventListener('pointerup', ()=>{
+  // Show password overlay first; on success open the manager menu
   const pwdOverlay = document.getElementById('pwd-overlay');
   const pwdInput   = document.getElementById('pwd-input');
   const pwdError   = document.getElementById('pwd-error');
   pwdInput.value = '';
   pwdError.style.display = 'none';
-  document.getElementById('pwd-confirm').textContent = 'Clear All';
-  pwdOverlay.style.display = 'flex';
-  setTimeout(()=>pwdInput.focus(), 100);
-  document.getElementById('pwd-cancel').onpointerup = ()=>{ pwdOverlay.style.display = 'none'; };
-  document.getElementById('pwd-confirm').onpointerup = ()=>{
+  document.getElementById('pwd-confirm').textContent = 'Enter';
+
+  function cleanupPwdHandlers(){
+    pwdCancel.removeEventListener('pointerup', handleCancel);
+    pwdConfirm.removeEventListener('pointerup', handleConfirm);
+    pwdInput.onkeydown = null;
+  }
+  const pwdCancel  = document.getElementById('pwd-cancel');
+  const pwdConfirm = document.getElementById('pwd-confirm');
+
+  function handleCancel(){
+    cleanupPwdHandlers();
+    pwdOverlay.style.display = 'none';
+  }
+  function handleConfirm(){
     if(pwdInput.value === '2047'){
+      cleanupPwdHandlers();
       pwdOverlay.style.display = 'none';
-      st.tables={}; st.events={}; st.movedPos={}; st.links={}; st.guestTotals={};
-      st.dailyTables=0; st.dailyGuests=0; st.newServers=new Set(); st.onBreak=new Set(); st.breakType={}; st.cutServers=new Set(); st.cutHistory=[];
-      st.selectedSec=null; st.mGroup=null;
-      st.servers = 2;
-      st.names = {1:'Server 1',2:'Server 2',3:'Server 3',4:'Server 4',5:'Server 5',
-        6:'Server 6',7:'Server 7',8:'Server 8',9:'Server 9',10:'Server 10',11:'Server 11'};
-      document.getElementById('srv-count').textContent = 2;
-      localStorage.removeItem(LS_KEY);
-      closeModal();
-      pickNamesSequentially(1, 2, ()=>{ renderAll(); });
+      showManagerMenu();
     } else {
       pwdError.style.display = 'block';
       pwdInput.value = '';
       pwdInput.focus();
     }
-  };
-  pwdInput.onkeydown = e=>{ if(e.key==='Enter') document.getElementById('pwd-confirm').dispatchEvent(new Event('pointerup')); };
+  }
+  pwdCancel.addEventListener('pointerup', handleCancel);
+  pwdConfirm.addEventListener('pointerup', handleConfirm);
+  pwdInput.onkeydown = e=>{ if(e.key==='Enter') handleConfirm(); };
+
+  pwdOverlay.style.display = 'flex';
+  setTimeout(()=>pwdInput.focus(), 100);
 });
 
-// Option 2: Reset guest counts only — no password needed
-document.getElementById('clear-opt-counts').addEventListener('pointerup',()=>{
-  document.getElementById('clear-modal').style.display = 'none';
+// Cancel button
+document.getElementById('mgr-modal-cancel').addEventListener('pointerup', closeManagerMenu);
+
+// Option: Server Reports
+document.getElementById('mgr-opt-reports').addEventListener('pointerup', ()=>{
+  closeManagerMenu();
+  openReports();
+});
+
+// Option: Edit Server Names
+document.getElementById('mgr-opt-names').addEventListener('pointerup', ()=>{
+  closeManagerMenu();
+  openEditNames();
+});
+
+function openEditNames(){
+  renderEditNamesList();
+  document.getElementById('edit-names-modal').style.display = 'flex';
+  document.getElementById('edit-names-input').value = '';
+}
+function closeEditNames(){
+  document.getElementById('edit-names-modal').style.display = 'none';
+}
+
+function renderEditNamesList(){
+  const list = document.getElementById('edit-names-list');
+  list.innerHTML = '';
+  const sorted = [...SERVER_NAME_LIST].sort((a,b)=>a.localeCompare(b));
+  if(sorted.length === 0){
+    list.innerHTML = '<div style="color:var(--dim);font-family:\'IBM Plex Mono\',monospace;font-size:12px;text-align:center;padding:16px 0;">No names in the list yet.</div>';
+    return;
+  }
+  sorted.forEach(name => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid rgba(255,255,255,0.06);';
+
+    const nameEl = document.createElement('div');
+    nameEl.textContent = name;
+    nameEl.style.cssText = 'flex:1;font-size:14px;font-weight:600;color:var(--text);font-family:\'IBM Plex Sans\',sans-serif;';
+
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = '✕';
+    removeBtn.style.cssText = 'width:32px;height:32px;border-radius:7px;border:1px solid rgba(255,80,80,0.3);background:rgba(255,80,80,0.07);color:rgba(255,100,100,0.8);font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;padding:0;flex-shrink:0;';
+    removeBtn.addEventListener('pointerup', ()=>{
+      showConfirm(`Remove "${name}" from the name list?`, ()=>{
+        const idx = SERVER_NAME_LIST.indexOf(name);
+        if(idx !== -1){
+          SERVER_NAME_LIST.splice(idx, 1);
+          saveNameList();
+          pushToFirebase();
+          deleteServerHistory(name);
+        }
+        renderEditNamesList();
+      });
+    });
+
+    row.appendChild(nameEl);
+    row.appendChild(removeBtn);
+    list.appendChild(row);
+  });
+}
+
+document.getElementById('edit-names-add').addEventListener('pointerup', ()=>{
+  const input = document.getElementById('edit-names-input');
+  const n = input.value.trim();
+  if(!n) return;
+  if(SERVER_NAME_LIST.includes(n)){
+    input.value = '';
+    return;
+  }
+  SERVER_NAME_LIST.push(n);
+  saveNameList();
+  pushToFirebase();
+  input.value = '';
+  renderEditNamesList();
+});
+document.getElementById('edit-names-input').addEventListener('keydown', e=>{
+  if(e.key === 'Enter') document.getElementById('edit-names-add').dispatchEvent(new PointerEvent('pointerup'));
+});
+document.getElementById('edit-names-done').addEventListener('pointerup', closeEditNames);
+
+
+
+// Option 0: Adjust Guest Counts
+document.getElementById('mgr-opt-adjust').addEventListener('pointerup', ()=>{
+  closeManagerMenu();
+  openAdjustCounts();
+});
+
+function openAdjustCounts(){
+  renderAdjustCounts();
+  document.getElementById('adjust-counts-modal').style.display = 'flex';
+}
+function closeAdjustCounts(){
+  document.getElementById('adjust-counts-modal').style.display = 'none';
+  // Save and re-render rotation with updated counts
+  snapshotState();
+  commitImmediate();
+}
+
+function renderAdjustCounts(){
+  const list = document.getElementById('adjust-counts-list');
+  list.innerHTML = '';
+
+  for(let s = 1; s <= st.servers; s++){
+    const isCut = st.cutServers.has(s);
+    const col   = FLOOR_C[s] || {bg:'#888888', tx:'#fff'};
+    const name  = st.names[s] || `Server ${s}`;
+    const count = Math.round(st.guestTotals[s] || 0);
+
+    const row = document.createElement('div');
+    row.className = 'adj-row';
+    if(isCut) row.style.opacity = '0.4';
+
+    // Badge
+    const badge = document.createElement('div');
+    badge.className = 'adj-badge';
+    badge.textContent = s;
+    badge.style.cssText = `background:${darkenHex(col.bg,0.55)};color:${col.bg};`;
+
+    // Name
+    const nameEl = document.createElement('div');
+    nameEl.className = 'adj-name';
+    nameEl.textContent = name;
+    if(isCut){
+      nameEl.style.textDecoration = 'line-through';
+      nameEl.style.opacity = '0.6';
+    }
+
+    // − button
+    const minus = document.createElement('button');
+    minus.textContent = '−';
+    minus.className = 'sec-adj-btn';
+    minus.disabled = isCut;
+    minus.addEventListener('pointerup', ev => {
+      ev.stopPropagation();
+      st.guestTotals[s] = Math.max(0, (st.guestTotals[s]||0) - 1);
+      renderAdjustCounts();  // live refresh within modal
+      renderRot();           // live update rotation panel
+    });
+
+    // Count display
+    const countEl = document.createElement('div');
+    countEl.className = 'adj-count';
+    countEl.style.color = isCut ? 'var(--dim)' : count > 0 ? 'var(--text)' : 'var(--dim)';
+    countEl.textContent = count;
+
+    // + button
+    const plus = document.createElement('button');
+    plus.textContent = '+';
+    plus.className = 'sec-adj-btn';
+    plus.disabled = isCut;
+    plus.addEventListener('pointerup', ev => {
+      ev.stopPropagation();
+      st.guestTotals[s] = (st.guestTotals[s]||0) + 1;
+      renderAdjustCounts();
+      renderRot();
+    });
+
+    row.appendChild(badge);
+    row.appendChild(nameEl);
+    row.appendChild(minus);
+    row.appendChild(countEl);
+    row.appendChild(plus);
+    list.appendChild(row);
+  }
+}
+
+document.getElementById('adjust-counts-done').addEventListener('pointerup', ()=>{
+  closeAdjustCounts();
+});
+
+
+document.getElementById('mgr-opt-clear').addEventListener('pointerup', ()=>{
+  closeManagerMenu();
+  showConfirm('Clear ALL data and start a new day?', ()=>{
+    // Snapshot current shift to history before wiping (fire-and-forget)
+    pushShiftToHistory();
+    st.tables={}; st.events={}; st.movedPos={}; st.links={}; st.guestTotals={};
+    st.dailyTables=0; st.dailyGuests=0; st.newServers=new Set(); st.onBreak=new Set();
+    st.breakType={}; st.cutServers=new Set(); st.cutHistory=[];
+    st.shiftRecord={}; // reset for the new day
+    st.selectedSec=null; st.mGroup=null;
+    st.servers = 2;
+    st.names = {1:'Server 1',2:'Server 2',3:'Server 3',4:'Server 4',5:'Server 5',
+      6:'Server 6',7:'Server 7',8:'Server 8',9:'Server 9',10:'Server 10',11:'Server 11'};
+    document.getElementById('srv-count').textContent = 2;
+    localStorage.removeItem(LS_KEY);
+    closeModal();
+    pickNamesSequentially(1, 2, ()=>{ renderAll(); });
+  });
+});
+
+// Option 2: Reset guest counts only
+document.getElementById('mgr-opt-counts').addEventListener('pointerup', ()=>{
+  closeManagerMenu();
   showConfirm('Reset all guest counts to zero?', ()=>{
-    // Zero all active server counts; preserve everything else
     for(let i = 1; i <= st.servers; i++) st.guestTotals[i] = 0;
     st.newServers = new Set();
     st.selectedSec = null;
     snapshotState();
     renderAll();
+  });
+});
+
+// Option 3: Logout
+document.getElementById('mgr-opt-logout').addEventListener('pointerup', ()=>{
+  closeManagerMenu();
+  showConfirm('Log out?', ()=>{
+    sessionStorage.removeItem('tt_auth_v1');
+    document.getElementById('login-screen').style.display = 'flex';
+    setTimeout(()=>document.getElementById('login-input').focus(), 300);
   });
 });
 document.getElementById('overlay').addEventListener('pointerup', e=>{
@@ -2659,6 +2983,18 @@ renderAll(); // seeds undo stack via snapshotState inside renderAll
       // Close any open confirm overlay
       const confirmOverlay = document.getElementById('confirm-overlay');
       if(confirmOverlay) confirmOverlay.classList.remove('open');
+      // Close manager menu if stuck open
+      const mgrModal = document.getElementById('manager-modal');
+      if(mgrModal) mgrModal.style.display = 'none';
+      // Close adjust-counts modal if stuck open
+      const adjModal = document.getElementById('adjust-counts-modal');
+      if(adjModal) adjModal.style.display = 'none';
+      // Close reports modal if stuck open
+      const rptModal = document.getElementById('reports-modal');
+      if(rptModal) rptModal.style.display = 'none';
+      // Close edit-names modal if stuck open
+      const editNamesModal = document.getElementById('edit-names-modal');
+      if(editNamesModal) editNamesModal.style.display = 'none';
       closeModal && closeModal();
       renderOnly();
       // Brief visual confirmation
@@ -2732,7 +3068,305 @@ let _fbSyncingTs = 0;
 let _fbPushPendingTs = 0;
 
 
-const FB_URL = 'https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app/shift';
+const FB_URL      = 'https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app/shift';
+const HISTORY_URL = 'https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app/history';
+
+// ── SHIFT RECORD HELPERS (current-shift accumulation by server name)
+
+function recordShiftGuests(name, guests){
+  if(!name || !(guests > 0)) return;
+  if(!st.shiftRecord[name]) st.shiftRecord[name] = {guests:0, turns:[]};
+  st.shiftRecord[name].guests = (st.shiftRecord[name].guests||0) + guests;
+}
+
+function recordShiftTurn(name, seatedAt){
+  if(!name || !seatedAt) return;
+  const minutes = Math.round((Date.now() - seatedAt) / 60000);
+  if(minutes < 1 || minutes > 600) return; // ignore implausible values
+  if(!st.shiftRecord[name]) st.shiftRecord[name] = {guests:0, turns:[]};
+  if(!Array.isArray(st.shiftRecord[name].turns)) st.shiftRecord[name].turns = [];
+  st.shiftRecord[name].turns.push(minutes);
+}
+
+// ── FIREBASE HISTORY FUNCTIONS
+
+// Firebase keys can't contain . # $ / [ ] — replace with _
+function sanitizeHistoryKey(name){
+  return name.replace(/[.#$\/\[\]]/g, '_');
+}
+
+// Snapshot the current shift's shiftRecord to Firebase history.
+// Called just before Clear All wipes the state.
+async function pushShiftToHistory(){
+  const rec = st.shiftRecord || {};
+  if(!Object.keys(rec).length) return;
+  const shiftId = 's_' + Date.now();
+  const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+  const pushes = [];
+  for(const [name, data] of Object.entries(rec)){
+    if(!(data.guests > 0) && !(data.turns && data.turns.length)) continue;
+    const turns = Array.isArray(data.turns) ? data.turns : [];
+    const avg = turns.length ? Math.round(turns.reduce((a,b)=>a+b,0)/turns.length) : null;
+    const record = {
+      date:   today,
+      guests: data.guests||0,
+      tables: turns.length,
+      avgTurn: avg,
+      minTurn: turns.length ? Math.min(...turns) : null,
+      maxTurn: turns.length ? Math.max(...turns) : null
+    };
+    const key = sanitizeHistoryKey(name);
+    pushes.push(
+      fetch(`${HISTORY_URL}/${key}/${shiftId}.json`, {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(record)
+      }).catch(()=>{})
+    );
+  }
+  await Promise.allSettled(pushes);
+}
+
+async function fetchHistory(){
+  try{
+    const res = await fetch(`${HISTORY_URL}.json`);
+    if(!res.ok) return {};
+    return (await res.json()) || {};
+  }catch(e){ return {}; }
+}
+
+async function deleteServerHistory(name){
+  try{
+    await fetch(`${HISTORY_URL}/${sanitizeHistoryKey(name)}.json`, {method:'DELETE'});
+  }catch(e){}
+}
+
+// ── REPORTS UI
+
+let _historyCache  = null;
+let _reportsPeriod = 'all';
+let _reportsServer = null;
+
+async function openReports(){
+  _reportsServer = null;
+  _reportsPeriod = 'all';
+  const modal = document.getElementById('reports-modal');
+  modal.style.display = 'flex';
+  document.getElementById('reports-content').innerHTML =
+    '<p class="rpt-no-data">Loading history…</p>';
+  document.querySelectorAll('.rpt-tab').forEach(t=>
+    t.classList.toggle('active', t.dataset.period === _reportsPeriod));
+  _syncCustomRow();
+  _historyCache = await fetchHistory();
+  renderReportsList();
+}
+
+function closeReports(){
+  document.getElementById('reports-modal').style.display = 'none';
+}
+
+// Returns {from, to} timestamps in ms for any period including custom
+function getFilterRange(period){
+  const now = Date.now();
+  if(period === 'today'){
+    const d = new Date(); d.setHours(0,0,0,0);
+    return {from: d.getTime(), to: now};
+  }
+  if(period === 'week'){
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-7);
+    return {from: d.getTime(), to: now};
+  }
+  if(period === 'custom'){
+    const fromEl = document.getElementById('rpt-from');
+    const toEl   = document.getElementById('rpt-to');
+    const fromVal = fromEl ? fromEl.value : '';
+    const toVal   = toEl   ? toEl.value   : '';
+    const from = fromVal ? new Date(fromVal + 'T00:00:00').getTime() : 0;
+    const toDate = toVal ? new Date(toVal + 'T23:59:59') : new Date();
+    toDate.setHours(23,59,59,999);
+    return {from, to: toDate.getTime()};
+  }
+  return {from: 0, to: now}; // all time
+}
+
+function getShiftTs(id){ return parseInt(id.replace('s_','')); }
+
+function aggregateForServer(serverShifts, period){
+  const {from, to} = getFilterRange(period);
+  let guests=0, tables=0, turnTotal=0, turnCount=0;
+  const shiftList = [];
+  for(const [id, s] of Object.entries(serverShifts||{})){
+    const ts = getShiftTs(id);
+    if(isNaN(ts) || ts < from || ts > to) continue;
+    guests  += s.guests||0;
+    tables  += s.tables||0;
+    if(s.avgTurn != null && s.tables > 0){
+      turnTotal += s.avgTurn * s.tables;
+      turnCount += s.tables;
+    }
+    shiftList.push({ts, ...s});
+  }
+  shiftList.sort((a,b)=>b.ts-a.ts);
+  const avgTurn = turnCount > 0 ? Math.round(turnTotal/turnCount) : null;
+  return {guests, tables, avgTurn, shiftList};
+}
+
+function renderReportsList(){
+  const content = document.getElementById('reports-content');
+  const history = _historyCache || {};
+  // Union of active name list + names in history
+  const nameSet = new Set([
+    ...SERVER_NAME_LIST,
+    ...Object.keys(history).map(k => {
+      // reverse sanitize: Firebase key -> try to match a name
+      for(const n of SERVER_NAME_LIST){ if(sanitizeHistoryKey(n)===k) return n; }
+      return k; // fall back to key itself
+    })
+  ]);
+  if(nameSet.size === 0){
+    content.innerHTML = '<p class="rpt-no-data">No server history yet.<br>History is recorded when you start a New Day.</p>';
+    return;
+  }
+  const rows = [];
+  for(const name of [...nameSet].sort()){
+    const key = sanitizeHistoryKey(name);
+    const agg = aggregateForServer(history[key], _reportsPeriod);
+    rows.push({name, ...agg});
+  }
+  rows.sort((a,b)=>b.guests-a.guests);
+
+  let html = '';
+  for(const r of rows){
+    let col = {bg:'#666666',tx:'#fff'};
+    for(let s=1;s<=11;s++){ if((st.names[s]||'')===r.name){ col=FLOOR_C[s]; break; } }
+    const bgDark = darkenHex(col.bg, 0.55);
+    const initial = r.name.charAt(0).toUpperCase();
+    const turnStr = r.avgTurn != null ? `${r.avgTurn}m avg` : '—';
+    html += `<div class="rpt-server-row" data-name="${r.name}">
+      <div class="rpt-srv-badge" style="background:${bgDark};color:${col.bg};">${initial}</div>
+      <div class="rpt-srv-name">${r.name}</div>
+      <div class="rpt-srv-stats">
+        <div class="rpt-stat-main">${r.guests} guests</div>
+        <div class="rpt-stat-sub">${r.tables} tables · ${turnStr}</div>
+      </div>
+      <div style="color:var(--dim);font-size:18px;padding-left:4px;flex-shrink:0;">›</div>
+    </div>`;
+  }
+  content.innerHTML = html || '<p class="rpt-no-data">No data for this period.</p>';
+  content.querySelectorAll('.rpt-server-row').forEach(row=>{
+    row.addEventListener('pointerup', ()=>{
+      _reportsServer = row.dataset.name;
+      renderReportDetail(_reportsServer);
+    });
+  });
+}
+
+function renderReportDetail(name){
+  const content = document.getElementById('reports-content');
+  const key = sanitizeHistoryKey(name);
+  const srv = (_historyCache||{})[key] || {};
+
+  const all   = aggregateForServer(srv, 'all');
+  const week  = aggregateForServer(srv, 'week');
+  const today = aggregateForServer(srv, 'today');
+  // For the shift history table, use whatever period is currently selected
+  const periodAgg = _reportsPeriod==='today' ? today
+    : _reportsPeriod==='week' ? week
+    : _reportsPeriod==='custom' ? aggregateForServer(srv, 'custom')
+    : all;
+
+  const fmt = v => v != null ? `${v}m` : '—';
+
+  const summaryBlock = (label, agg) => `
+    <div class="rpt-period-label">${label}</div>
+    <div class="rpt-summary-grid">
+      <div class="rpt-summary-card"><div class="rpt-summary-val">${agg.guests}</div><div class="rpt-summary-lbl">GUESTS</div></div>
+      <div class="rpt-summary-card"><div class="rpt-summary-val">${agg.tables}</div><div class="rpt-summary-lbl">TABLES</div></div>
+      <div class="rpt-summary-card"><div class="rpt-summary-val">${fmt(agg.avgTurn)}</div><div class="rpt-summary-lbl">AVG TURN</div></div>
+    </div>`;
+
+  const customFrom = (document.getElementById('rpt-from')||{}).value || '';
+  const customTo   = (document.getElementById('rpt-to')||{}).value   || '';
+  const periodLabel = _reportsPeriod==='today' ? 'TODAY'
+    : _reportsPeriod==='week' ? 'THIS WEEK'
+    : _reportsPeriod==='custom' ? (customFrom||'…') + ' → ' + (customTo||'…')
+    : 'ALL TIME';
+  let shiftRows = '';
+  if(periodAgg.shiftList.length === 0){
+    shiftRows = '<p class="rpt-no-data" style="padding:16px 0;">No shifts in this period.</p>';
+  } else {
+    shiftRows = `<div class="rpt-shift-hdr">
+      <div>DATE</div><div style="text-align:right;">GUESTS</div>
+      <div style="text-align:right;">TABLES</div><div style="text-align:right;">AVG TURN</div>
+    </div>`;
+    for(const s of periodAgg.shiftList){
+      const dateStr = new Date(s.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',weekday:'short'});
+      shiftRows += `<div class="rpt-shift-row">
+        <div>${dateStr}</div>
+        <div style="text-align:right;">${s.guests}</div>
+        <div style="text-align:right;">${s.tables}</div>
+        <div style="text-align:right;">${fmt(s.avgTurn)}</div>
+      </div>`;
+    }
+  }
+
+  content.innerHTML = `
+    <div class="rpt-back" id="rpt-back-btn">← All Servers</div>
+    <div style="font-family:'IBM Plex Sans',sans-serif;font-size:17px;font-weight:700;color:var(--text);margin-bottom:16px;">${name}</div>
+    ${summaryBlock('TODAY', today)}
+    ${summaryBlock('THIS WEEK', week)}
+    ${summaryBlock('ALL TIME', all)}
+    <div class="rpt-period-label" style="margin-top:4px;">SHIFT HISTORY (${periodLabel})</div>
+    ${shiftRows}`;
+
+  document.getElementById('rpt-back-btn').addEventListener('pointerup', ()=>{
+    _reportsServer = null;
+    renderReportsList();
+  });
+}
+
+// Period tab wiring (set after modal exists in DOM)
+function _syncCustomRow(){
+  const row = document.getElementById('rpt-custom-row');
+  if(!row) return;
+  row.style.display = _reportsPeriod === 'custom' ? 'flex' : 'none';
+}
+
+document.querySelectorAll('.rpt-tab').forEach(tab=>{
+  tab.addEventListener('pointerup', ()=>{
+    _reportsPeriod = tab.dataset.period;
+    document.querySelectorAll('.rpt-tab').forEach(t=>
+      t.classList.toggle('active', t===tab));
+
+    if(_reportsPeriod === 'custom'){
+      // Default dates: 30 days ago → today
+      const fromEl = document.getElementById('rpt-from');
+      const toEl   = document.getElementById('rpt-to');
+      if(!fromEl.value){
+        const d = new Date(); d.setDate(d.getDate()-30);
+        fromEl.value = d.toLocaleDateString('en-CA');
+      }
+      if(!toEl.value){
+        toEl.value = new Date().toLocaleDateString('en-CA');
+      }
+    }
+
+    _syncCustomRow();
+    if(_reportsServer) renderReportDetail(_reportsServer);
+    else renderReportsList();
+  });
+});
+
+// Re-render immediately when either date input changes
+['rpt-from','rpt-to'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('change', ()=>{
+    if(_reportsPeriod !== 'custom') return;
+    if(_reportsServer) renderReportDetail(_reportsServer);
+    else renderReportsList();
+  });
+});
+
+document.getElementById('reports-close').addEventListener('pointerup', closeReports);
 
 
 // Deserialize Firebase data into local state and re-render
@@ -3209,7 +3843,7 @@ hr {
     <div class="guide-header">
   <div class="guide-title">⬡ Aulac Big Stop</div>
   <h1>Table Tracker<br>Staff Guide</h1>
-  <p>Everything you need to run the host stand — v1.3</p>
+  <p>Everything you need to run the host stand — v1.4</p>
 </div>
 
 <!-- GETTING STARTED -->
