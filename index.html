@@ -20,22 +20,22 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
 html,body{height:100%;overflow:hidden;font-family:'IBM Plex Mono','Courier New',monospace;background:var(--bg);color:var(--text);text-rendering:optimizeLegibility;}
-body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-select:none;user-select:none;touch-action:manipulation;overscroll-behavior:none;}
+body{display:flex;flex-direction:row;height:100vh;height:100dvh;-webkit-user-select:none;user-select:none;touch-action:manipulation;overscroll-behavior:none;}
 
-/* HEADER */
-#hdr{height:72px;min-height:72px;flex-shrink:0;background:var(--surf);border-bottom:1px solid var(--border);
-  display:flex;align-items:center;padding:0 12px;gap:10px;}
-#logo{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);letter-spacing:1px;white-space:nowrap;}
-.vdiv{width:1px;height:20px;background:var(--border);}
-.hctl{display:flex;align-items:center;gap:6px;background:var(--surf2);border:1px solid var(--border);border-radius:7px;padding:4px 8px;}
-.hctl label{font-size:10px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.6px;}
-.srv-adj-btn{width:34px;height:34px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);
-  color:#fff;font-size:20px;font-weight:700;cursor:pointer;line-height:1;padding:0;font-family:'IBM Plex Mono',monospace;}
+/* HEADER — now sits above the floor map only, not the rotation panel */
+#hdr{height:52px;min-height:52px;flex-shrink:0;background:var(--surf);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 10px;gap:8px;}
+#logo{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:var(--accent);letter-spacing:1px;white-space:nowrap;}
+.vdiv{width:1px;height:18px;background:var(--border);}
+.hctl{display:flex;align-items:center;gap:5px;background:var(--surf2);border:1px solid var(--border);border-radius:7px;padding:3px 7px;}
+.hctl label{font-size:9px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.6px;}
+.srv-adj-btn{width:28px;height:28px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);
+  color:#fff;font-size:18px;font-weight:700;cursor:pointer;line-height:1;padding:0;font-family:'IBM Plex Mono',monospace;}
 .srv-adj-btn:active{background:rgba(255,255,255,0.18);}
-#srv-count{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:700;color:#fff;min-width:22px;text-align:center;}
-#btn-manager{padding:6px 10px;border-radius:7px;border:1px solid rgba(255,200,0,0.3);background:rgba(255,200,0,0.07);color:#ffc800;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'IBM Plex Sans',sans-serif;}
+#srv-count{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;color:#fff;min-width:20px;text-align:center;}
+#btn-manager{padding:5px 9px;border-radius:7px;border:1px solid rgba(255,200,0,0.3);background:rgba(255,200,0,0.07);color:#ffc800;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'IBM Plex Sans',sans-serif;}
 #btn-manager:active{background:rgba(255,200,0,0.18);}
-#btn-reset-pos{margin-left:auto;padding:6px 10px;border-radius:7px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:var(--dim);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'IBM Plex Sans',sans-serif;}
+#btn-reset-pos{margin-left:auto;padding:5px 9px;border-radius:7px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:var(--dim);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'IBM Plex Sans',sans-serif;}
 #btn-reset-pos:active{background:rgba(255,255,255,0.12);}
 #btn-undo{padding:6px 10px;border-radius:7px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:var(--dim);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:'IBM Plex Sans',sans-serif;transition:background .15s,color .15s,border-color .15s;}
 #btn-undo:not(:disabled){background:rgba(255,215,0,0.12);color:var(--accent);border-color:rgba(255,215,0,0.35);}
@@ -47,10 +47,11 @@ body{display:flex;flex-direction:column;height:100vh;height:100dvh;-webkit-user-
 #btn-redo:disabled{opacity:0.3;cursor:default;}
 
 /* MAIN — side by side */
-#main{flex:1;display:flex;flex-direction:row;overflow:hidden;min-height:0;}
+#main{flex:1;display:flex;flex-direction:row;overflow:hidden;min-height:0;min-width:0;}
+#floor-col{flex:1;min-width:0;display:flex;flex-direction:column;border-right:2px solid var(--border);}
 
 /* LEFT — FLOOR (takes all remaining width) */
-#panel-floor{display:flex;flex-direction:column;flex:1;min-width:0;border-right:2px solid var(--border);}
+#panel-floor{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;}
 #flr-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:6px;overflow:hidden;touch-action:none;contain:layout style;}
 #flr-clip{position:relative;overflow:hidden;flex-shrink:0;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,0.7);-webkit-transform:translateZ(0);transform:translateZ(0);contain:layout style paint;}
 #flr{position:relative;background:#191b1f;border-radius:10px;border:1.5px solid rgba(255,255,255,0.1);-webkit-transform:translateZ(0);transform:translateZ(0);contain:layout style paint;-webkit-backface-visibility:hidden;backface-visibility:hidden;}
@@ -262,43 +263,45 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
   </div>
 </div>
 
-<div id="hdr">
-  <div id="logo">Aulac Big Stop</div>
-  <div class="vdiv"></div>
-  <div class="hctl">
-    <label>Servers</label>
-    <button id="srv-dec" class="srv-adj-btn">−</button>
-    <span id="srv-count">7</span>
-    <button id="srv-inc" class="srv-adj-btn">+</button>
-  </div>
-  <button id="btn-undo" disabled>↩ Undo</button>
-  <button id="btn-redo" disabled>↪ Redo</button>
-  <button id="btn-reset-pos">↩ Reset All Table Positions</button>
-  <button id="btn-manager">⚙ Manager</button>
-</div>
-
 <div id="main">
-  <!-- TOP: FLOOR MAP -->
-  <div id="panel-floor">
-    <div id="flr-wrap"><div id="flr-clip"><div id="flr"></div></div></div>
-    <div id="sbar">
-      <div class="st"><strong id="ss">0</strong> seated</div>
-      <div class="st"><strong id="sg">0</strong> guests</div>
-      <div class="st"><strong id="so">0</strong> open</div>
-      <div style="margin-left:auto;display:flex;gap:14px;">
-        <div class="st">🪑 <strong id="total-tables">0</strong></div>
-        <div class="st">👥 <strong id="total-guests">0</strong></div>
+  <div id="floor-col">
+    <div id="hdr">
+      <div id="logo">Aulac Big Stop</div>
+      <div class="vdiv"></div>
+      <div class="hctl">
+        <label>Servers</label>
+        <button id="srv-dec" class="srv-adj-btn">−</button>
+        <span id="srv-count">7</span>
+        <button id="srv-inc" class="srv-adj-btn">+</button>
+      </div>
+      <button id="btn-undo" disabled>↩ Undo</button>
+      <button id="btn-redo" disabled>↪ Redo</button>
+      <button id="btn-reset-pos">↩ Reset All Table Positions</button>
+      <button id="btn-manager">⚙ Manager</button>
+    </div>
+
+    <!-- FLOOR MAP -->
+    <div id="panel-floor">
+      <div id="flr-wrap"><div id="flr-clip"><div id="flr"></div></div></div>
+      <div id="sbar">
+        <div class="st"><strong id="ss">0</strong> seated</div>
+        <div class="st"><strong id="sg">0</strong> guests</div>
+        <div class="st"><strong id="so">0</strong> open</div>
+        <div style="margin-left:auto;display:flex;gap:14px;">
+          <div class="st">🪑 <strong id="total-tables">0</strong></div>
+          <div class="st">👥 <strong id="total-guests">0</strong></div>
+        </div>
+      </div>
+      <div id="next-banner">
+        <div id="next-banner-label">Next Up</div>
+        <div id="next-banner-dot"></div>
+        <div id="next-banner-name">—</div>
+        <div id="next-banner-upcoming" style="margin-left:auto;display:flex;align-items:center;gap:6px;"></div>
       </div>
     </div>
-    <div id="next-banner">
-      <div id="next-banner-label">Next Up</div>
-      <div id="next-banner-dot"></div>
-      <div id="next-banner-name">—</div>
-      <div id="next-banner-upcoming" style="margin-left:auto;display:flex;align-items:center;gap:6px;"></div>
-    </div>
   </div>
 
-  <!-- BOTTOM: ROTATION -->
+  <!-- ROTATION (full height — no header above) -->
   <div id="panel-rot">
     <div id="rot-header">
       <div id="rot-title">⚖ ROTATION</div>
@@ -599,6 +602,8 @@ let pushToFirebase = () => {};
 
 
 // ── SHARED STATE SERIALIZER
+// stateToObj — compact serialization used for undo/redo snapshots.
+// Does NOT include the undo/redo stacks themselves (that would recurse).
 function stateToObj(){
   return {
     servers:     st.servers,
@@ -620,6 +625,17 @@ function stateToObj(){
     nameList:    SERVER_NAME_LIST
   };
 }
+
+// stateToFirebase — full payload sent to Firebase. Adds undo/redo stacks so
+// other devices can restore them. The stacks are arrays of compact stateToObj
+// snapshots, so the payload stays bounded (UNDO_MAX entries × state size).
+function stateToFirebase(){
+  return {
+    ...stateToObj(),
+    undoStack: UNDO_STACK,
+    redoStack: REDO_STACK
+  };
+}
 // ── UNDO / REDO STACKS
 const UNDO_STACK = [];
 const REDO_STACK = [];
@@ -636,7 +652,7 @@ function snapshotState(){
   saveLocal();
 }
 function applySnap(snap){
-  deserializeState(JSON.parse(snap));
+  deserializeState(JSON.parse(snap), false); // don't restore stacks — we're managing them right now
   updateUndoBtn();
   renderOnly();
   pushToFirebase();
@@ -662,7 +678,10 @@ function updateUndoBtn(){
 
 
 // ── SHARED STATE DESERIALIZER
-function deserializeState(data){
+// restoreStacks=true (default): restores UNDO_STACK/REDO_STACK from data if
+// present. Pass false from applySnap so an undo/redo action doesn't clobber
+// the stacks that are being actively managed by undoState/redoState.
+function deserializeState(data, restoreStacks = true){
   st.servers     = data.servers     ?? st.servers;
   st.names       = data.names       ?? st.names;
   st.tables      = data.tables      ?? {};
@@ -685,6 +704,17 @@ function deserializeState(data){
   st.links = {};
   for(const [k,v] of Object.entries(data.links ?? {})) st.links[+k] = new Set(v);
   const sc = document.getElementById('srv-count'); if(sc) sc.textContent = st.servers;
+
+  // Restore undo/redo stacks from remote data so all devices share history
+  if(restoreStacks && Array.isArray(data.undoStack)){
+    UNDO_STACK.length = 0;
+    data.undoStack.forEach(s => UNDO_STACK.push(s));
+  }
+  if(restoreStacks && Array.isArray(data.redoStack)){
+    REDO_STACK.length = 0;
+    data.redoStack.forEach(s => REDO_STACK.push(s));
+  }
+  updateUndoBtn();
 }
 // ── LOCAL PERSISTENCE KEY
 const LS_KEY = 'tt_shift_v1';
@@ -3407,7 +3437,7 @@ pushToFirebase = function(){
   _fbPushTimer = setTimeout(()=>{
     _fbPushTimer = null;
     _fbPushFirstCall = 0;
-    const body = JSON.stringify(stateToObj());
+    const body = JSON.stringify(stateToFirebase()); // includes undo/redo stacks
     _lastPushedBody = body;
     _fbPushPending = true;
     fetch(FB_URL + '.json', {
