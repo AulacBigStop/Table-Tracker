@@ -428,6 +428,11 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
     <div class="rpt-title">📊 SERVER REPORTS</div>
     <button id="reports-close">✕</button>
   </div>
+  <!-- View mode toggle -->
+  <div style="display:flex;gap:6px;padding:10px 16px 0;flex-shrink:0;">
+    <button class="rpt-mode-btn active" data-mode="server" style="flex:1;padding:8px 0;border-radius:8px;border:1px solid rgba(255,200,0,.35);background:rgba(255,200,0,.12);color:#ffc800;font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.3px;">By Server</button>
+    <button class="rpt-mode-btn" data-mode="section" style="flex:1;padding:8px 0;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.3px;">By Section</button>
+  </div>
   <div class="rpt-tabs">
     <button class="rpt-tab" data-period="today">Today</button>
     <button class="rpt-tab" data-period="week">This Week</button>
@@ -588,6 +593,7 @@ const st = {
   cutHistory: [],          // [{slot, name, guestCount}] — servers replaced in-place
   endTimes:   {},          // {serverNum: 'HH:MM'} — shift end time per server
   shiftRecord:{},          // {name:{guests,turns[]}} — current-shift stats by server name
+  sectionRecord:{},        // {secNum:{guests,turns[]}} — current-shift stats by section number
   selectedSec: null,
   rotMode: false,
   mTable:null, mParty:null, mGroup:null, mMultiSec:null, mMultiStep:0, mOverrideSec:null,
@@ -621,6 +627,7 @@ function stateToObj(){
     cutHistory:  st.cutHistory,
     endTimes:    st.endTimes,
     shiftRecord: st.shiftRecord,
+    sectionRecord: st.sectionRecord,
     selectedSec: st.selectedSec ?? null,
     nameList:    SERVER_NAME_LIST
   };
@@ -695,7 +702,8 @@ function deserializeState(data, restoreStacks = true){
   st.cutServers  = new Set(data.cutServers ?? []);
   st.cutHistory  = data.cutHistory ?? [];
   st.endTimes    = data.endTimes   ?? {};
-  st.shiftRecord = data.shiftRecord ?? {};
+  st.shiftRecord   = data.shiftRecord   ?? {};
+  st.sectionRecord = data.sectionRecord ?? {};
   st.selectedSec = data.selectedSec ?? null;
   if(data.nameList && Array.isArray(data.nameList) && data.nameList.length > 0){
     SERVER_NAME_LIST = data.nameList;
@@ -2280,6 +2288,7 @@ function doSeatTable(id, party, secOverride){
     if(!prevParty){
       const type = party===1 ? 'S' : party>=5 ? 'XL' : 'X';
       addEventToSec(s, type, party);
+      recordSectionGuests(secOf(id), party); // natural section (not assigned server)
     } else if(prevParty !== 0 && prevParty !== party){
       if(!st.guestTotals[s]) st.guestTotals[s] = 0;
       st.guestTotals[s] += (party - prevParty);
@@ -2339,6 +2348,8 @@ function doSeat(){
     if(s && st.mParty !== 0 && !prevParty){
       const type = st.mParty===1 ? 'S' : st.mParty>=5 ? 'XL' : 'X';
       addEventToSec(s, type, st.mParty);
+      // Record for each table's natural section (one entry per table in group)
+      for(const gid of ids) recordSectionGuests(secOf(gid), st.mParty);
     } else if(s && st.mParty !== 0 && prevParty && prevParty !== 0 && prevParty !== st.mParty){
       if(!st.guestTotals[s]) st.guestTotals[s]=0;
       st.guestTotals[s] += (st.mParty - prevParty);
@@ -2390,6 +2401,7 @@ function doClear(){
     if(d && d.party > 0 && d.seatedAt){
       const name = d.seatedByName || st.names[d.coverageSec != null ? +d.coverageSec : d.sec] || null;
       if(name) recordShiftTurn(name, d.seatedAt);
+      recordSectionTurn(secOf(gid), d.seatedAt); // natural section
     }
     delete st.tables[gid];
     delete st.movedPos[gid];
@@ -2798,10 +2810,12 @@ document.getElementById('mgr-opt-clear').addEventListener('pointerup', ()=>{
   showConfirm('Clear ALL data and start a new day?', ()=>{
     // Snapshot current shift to history before wiping (fire-and-forget)
     pushShiftToHistory();
+    pushSectionToHistory();
     st.tables={}; st.events={}; st.movedPos={}; st.links={}; st.guestTotals={};
     st.dailyTables=0; st.dailyGuests=0; st.newServers=new Set(); st.onBreak=new Set();
     st.breakType={}; st.cutServers=new Set(); st.cutHistory=[];
     st.shiftRecord={}; // reset for the new day
+    st.sectionRecord={};
     st.selectedSec=null; st.mGroup=null;
     st.servers = 2;
     st.names = {1:'Server 1',2:'Server 2',3:'Server 3',4:'Server 4',5:'Server 5',
@@ -3115,7 +3129,8 @@ let _fbPushPendingTs = 0;
 
 
 const FB_URL      = 'https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app/shift';
-const HISTORY_URL = 'https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app/history';
+const HISTORY_URL         = 'https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app/history';
+const SECTION_HISTORY_URL = 'https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app/section-history';
 
 // ── SHIFT RECORD HELPERS (current-shift accumulation by server name)
 
@@ -3132,6 +3147,23 @@ function recordShiftTurn(name, seatedAt){
   if(!st.shiftRecord[name]) st.shiftRecord[name] = {guests:0, turns:[]};
   if(!Array.isArray(st.shiftRecord[name].turns)) st.shiftRecord[name].turns = [];
   st.shiftRecord[name].turns.push(minutes);
+}
+
+function recordSectionGuests(secNum, guests){
+  if(!secNum || !(guests > 0)) return;
+  const k = String(secNum);
+  if(!st.sectionRecord[k]) st.sectionRecord[k] = {guests:0, turns:[]};
+  st.sectionRecord[k].guests = (st.sectionRecord[k].guests||0) + guests;
+}
+
+function recordSectionTurn(secNum, seatedAt){
+  if(!secNum || !seatedAt) return;
+  const minutes = Math.round((Date.now() - seatedAt) / 60000);
+  if(minutes < 1 || minutes > 600) return;
+  const k = String(secNum);
+  if(!st.sectionRecord[k]) st.sectionRecord[k] = {guests:0, turns:[]};
+  if(!Array.isArray(st.sectionRecord[k].turns)) st.sectionRecord[k].turns = [];
+  st.sectionRecord[k].turns.push(minutes);
 }
 
 // ── FIREBASE HISTORY FUNCTIONS
@@ -3180,6 +3212,40 @@ async function fetchHistory(){
   }catch(e){ return {}; }
 }
 
+async function pushSectionToHistory(){
+  const rec = st.sectionRecord || {};
+  if(!Object.keys(rec).length) return;
+  const shiftId = 's_' + Date.now();
+  const today = new Date().toLocaleDateString('en-CA');
+  const pushes = [];
+  for(const [secNum, data] of Object.entries(rec)){
+    if(!(data.guests > 0) && !(data.turns && data.turns.length)) continue;
+    const turns = Array.isArray(data.turns) ? data.turns : [];
+    const avg = turns.length ? Math.round(turns.reduce((a,b)=>a+b,0)/turns.length) : null;
+    const record = {
+      date: today, guests: data.guests||0, tables: turns.length,
+      avgTurn: avg,
+      minTurn: turns.length ? Math.min(...turns) : null,
+      maxTurn: turns.length ? Math.max(...turns) : null
+    };
+    pushes.push(
+      fetch(`${SECTION_HISTORY_URL}/sec_${secNum}/${shiftId}.json`, {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(record)
+      }).catch(()=>{})
+    );
+  }
+  await Promise.allSettled(pushes);
+}
+
+async function fetchSectionHistory(){
+  try{
+    const res = await fetch(`${SECTION_HISTORY_URL}.json`);
+    if(!res.ok) return {};
+    return (await res.json()) || {};
+  }catch(e){ return {}; }
+}
+
 async function deleteServerHistory(name){
   try{
     await fetch(`${HISTORY_URL}/${sanitizeHistoryKey(name)}.json`, {method:'DELETE'});
@@ -3188,9 +3254,11 @@ async function deleteServerHistory(name){
 
 // ── REPORTS UI
 
-let _historyCache  = null;
-let _reportsPeriod = 'all';
-let _reportsServer = null;
+let _historyCache        = null;
+let _sectionHistoryCache = null;
+let _reportsPeriod       = 'all';
+let _reportsServer       = null;
+let _historyMode         = 'server'; // 'server' | 'section'
 
 async function openReports(){
   _reportsServer = null;
@@ -3202,11 +3270,20 @@ async function openReports(){
   document.querySelectorAll('.rpt-tab').forEach(t=>
     t.classList.toggle('active', t.dataset.period === _reportsPeriod));
   _syncCustomRow();
-  const firebaseHistory = await fetchHistory();
-  // Merge the current shift's live shiftRecord into the cache so reports
-  // show today's numbers even before a New Day reset is done.
-  _historyCache = mergeCurrentShift(firebaseHistory);
-  renderReportsList();
+  // Sync mode toggle visual
+  document.querySelectorAll('.rpt-mode-btn').forEach(b=>{
+    const active = b.dataset.mode === _historyMode;
+    b.style.background = active ? 'rgba(255,200,0,.12)' : 'rgba(255,255,255,.04)';
+    b.style.borderColor = active ? 'rgba(255,200,0,.35)' : 'rgba(255,255,255,.1)';
+    b.style.color = active ? '#ffc800' : 'var(--dim)';
+  });
+  const [firebaseHistory, firebaseSectionHistory] = await Promise.all([
+    fetchHistory(), fetchSectionHistory()
+  ]);
+  _historyCache        = mergeCurrentShift(firebaseHistory);
+  _sectionHistoryCache = mergeCurrentSection(firebaseSectionHistory);
+  if(_historyMode === 'section') renderSectionList();
+  else renderReportsList();
 }
 
 // Merge st.shiftRecord (current in-progress shift) into the Firebase history
@@ -3238,7 +3315,27 @@ function closeReports(){
   document.getElementById('reports-modal').style.display = 'none';
 }
 
-// Returns {from, to} timestamps in ms for any period including custom
+// Merge st.sectionRecord (current in-progress shift) into section history cache.
+function mergeCurrentSection(history){
+  const merged = JSON.parse(JSON.stringify(history || {}));
+  const today = new Date().toLocaleDateString('en-CA');
+  const liveKey = 's_live_' + today;
+  for(const [secNum, data] of Object.entries(st.sectionRecord || {})){
+    if(!(data.guests > 0) && !(data.turns && data.turns.length)) continue;
+    const turns = Array.isArray(data.turns) ? data.turns : [];
+    const avg = turns.length ? Math.round(turns.reduce((a,b)=>a+b,0)/turns.length) : null;
+    const key = `sec_${secNum}`;
+    if(!merged[key]) merged[key] = {};
+    merged[key][liveKey] = {
+      date: today, guests: data.guests||0, tables: turns.length,
+      avgTurn: avg,
+      minTurn: turns.length ? Math.min(...turns) : null,
+      maxTurn: turns.length ? Math.max(...turns) : null,
+      live: true
+    };
+  }
+  return merged;
+}
 function getFilterRange(period){
   const now = Date.now();
   if(period === 'today'){
@@ -3416,6 +3513,154 @@ function renderReportDetail(name){
   });
 }
 
+// ── BY-SECTION REPORTS
+
+function renderSectionList(){
+  const content = document.getElementById('reports-content');
+  const history = _sectionHistoryCache || {};
+  const maxSec = st.servers; // only show sections currently in use
+
+  const rows = [];
+  for(let s = 1; s <= maxSec; s++){
+    const key = `sec_${s}`;
+    const agg = aggregateForServer(history[key], _reportsPeriod);
+    if(agg.guests === 0 && agg.tables === 0) continue;
+    rows.push({s, ...agg});
+  }
+  // Also include sections from history that may no longer be active
+  for(const key of Object.keys(history)){
+    const match = key.match(/^sec_(\d+)$/);
+    if(!match) continue;
+    const s = +match[1];
+    if(s <= maxSec) continue; // already included
+    const agg = aggregateForServer(history[key], _reportsPeriod);
+    if(agg.guests === 0 && agg.tables === 0) continue;
+    rows.push({s, ...agg});
+  }
+  rows.sort((a,b) => a.s - b.s);
+
+  if(rows.length === 0){
+    content.innerHTML = '<p class="rpt-no-data">No section data for this period.</p>';
+    return;
+  }
+
+  let html = '';
+  for(const r of rows){
+    const col = FLOOR_C[r.s] || {bg:'#666',tx:'#fff'};
+    const bgDark = darkenHex(col.bg, 0.55);
+    const turnStr = r.avgTurn != null ? `${r.avgTurn}m avg` : '—';
+    const currentServer = st.names[r.s] || `Server ${r.s}`;
+    html += `<div class="rpt-server-row" data-sec="${r.s}">
+      <div class="rpt-srv-badge" style="background:${bgDark};color:${col.bg};font-size:14px;font-weight:800;">${r.s}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--text);">Section ${r.s}</div>
+        <div style="font-size:10px;color:var(--dim);margin-top:1px;">${currentServer}</div>
+      </div>
+      <div class="rpt-srv-stats">
+        <div class="rpt-stat-main">${r.guests} guests</div>
+        <div class="rpt-stat-sub">${r.tables} tables · ${turnStr}</div>
+      </div>
+      <div style="color:var(--dim);font-size:18px;padding-left:4px;flex-shrink:0;">›</div>
+    </div>`;
+  }
+  content.innerHTML = html;
+  content.querySelectorAll('.rpt-server-row').forEach(row=>{
+    row.addEventListener('pointerup', ()=>{
+      renderSectionDetail(+row.dataset.sec);
+    });
+  });
+}
+
+function renderSectionDetail(secNum){
+  const content = document.getElementById('reports-content');
+  const key = `sec_${secNum}`;
+  const srv = (_sectionHistoryCache||{})[key] || {};
+
+  const all   = aggregateForServer(srv, 'all');
+  const week  = aggregateForServer(srv, 'week');
+  const today = aggregateForServer(srv, 'today');
+  const periodAgg = _reportsPeriod==='today' ? today
+    : _reportsPeriod==='week' ? week
+    : _reportsPeriod==='custom' ? aggregateForServer(srv, 'custom')
+    : all;
+
+  const fmt = v => v != null ? `${v}m` : '—';
+  const col = FLOOR_C[secNum] || {bg:'#666',tx:'#fff'};
+
+  const summaryBlock = (label, agg) => `
+    <div class="rpt-period-label">${label}</div>
+    <div class="rpt-summary-grid">
+      <div class="rpt-summary-card"><div class="rpt-summary-val">${agg.guests}</div><div class="rpt-summary-lbl">GUESTS</div></div>
+      <div class="rpt-summary-card"><div class="rpt-summary-val">${agg.tables}</div><div class="rpt-summary-lbl">TABLES</div></div>
+      <div class="rpt-summary-card"><div class="rpt-summary-val">${fmt(agg.avgTurn)}</div><div class="rpt-summary-lbl">AVG TURN</div></div>
+    </div>`;
+
+  const customFrom = (document.getElementById('rpt-from')||{}).value || '';
+  const customTo   = (document.getElementById('rpt-to')||{}).value   || '';
+  const periodLabel = _reportsPeriod==='today' ? 'TODAY'
+    : _reportsPeriod==='week' ? 'THIS WEEK'
+    : _reportsPeriod==='custom' ? (customFrom||'…') + ' → ' + (customTo||'…')
+    : 'ALL TIME';
+
+  let shiftRows = '';
+  if(periodAgg.shiftList.length === 0){
+    shiftRows = '<p class="rpt-no-data" style="padding:16px 0;">No shifts in this period.</p>';
+  } else {
+    shiftRows = `<div class="rpt-shift-hdr">
+      <div>DATE</div><div style="text-align:right;">GUESTS</div>
+      <div style="text-align:right;">TABLES</div><div style="text-align:right;">AVG TURN</div>
+    </div>`;
+    for(const s of periodAgg.shiftList){
+      const isLive = isLiveShift(s.id || '');
+      const dateStr = isLive
+        ? '<span style="color:#ffc800;font-size:10px;">● IN PROGRESS</span>'
+        : new Date(s.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',weekday:'short'});
+      shiftRows += `<div class="rpt-shift-row">
+        <div>${dateStr}</div>
+        <div style="text-align:right;">${s.guests}</div>
+        <div style="text-align:right;">${s.tables}</div>
+        <div style="text-align:right;">${fmt(s.avgTurn)}</div>
+      </div>`;
+    }
+  }
+
+  const currentServer = st.names[secNum] || `Server ${secNum}`;
+  content.innerHTML = `
+    <div class="rpt-back" id="rpt-back-btn">← All Sections</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <div style="width:32px;height:32px;border-radius:8px;background:${darkenHex(col.bg,0.55)};display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:800;color:${col.bg};">${secNum}</div>
+      <div>
+        <div style="font-family:'IBM Plex Sans',sans-serif;font-size:17px;font-weight:700;color:var(--text);">Section ${secNum}</div>
+        <div style="font-size:11px;color:var(--dim);">Currently: ${currentServer}</div>
+      </div>
+    </div>
+    ${summaryBlock('TODAY', today)}
+    ${summaryBlock('THIS WEEK', week)}
+    ${summaryBlock('ALL TIME', all)}
+    <div class="rpt-period-label" style="margin-top:4px;">SHIFT HISTORY (${periodLabel})</div>
+    ${shiftRows}`;
+
+  document.getElementById('rpt-back-btn').addEventListener('pointerup', ()=>{
+    renderSectionList();
+  });
+}
+
+// Mode toggle wiring (By Server / By Section)
+document.querySelectorAll('.rpt-mode-btn').forEach(btn=>{
+  btn.addEventListener('pointerup', ()=>{
+    _historyMode = btn.dataset.mode;
+    _reportsServer = null;
+    document.querySelectorAll('.rpt-mode-btn').forEach(b=>{
+      const active = b.dataset.mode === _historyMode;
+      b.style.background   = active ? 'rgba(255,200,0,.12)' : 'rgba(255,255,255,.04)';
+      b.style.borderColor  = active ? 'rgba(255,200,0,.35)'  : 'rgba(255,255,255,.1)';
+      b.style.color        = active ? '#ffc800'              : 'var(--dim)';
+    });
+    if(_historyMode === 'section') renderSectionList();
+    else renderReportsList();
+  });
+});
+
 // Period tab wiring (set after modal exists in DOM)
 function _syncCustomRow(){
   const row = document.getElementById('rpt-custom-row');
@@ -3444,6 +3689,7 @@ document.querySelectorAll('.rpt-tab').forEach(tab=>{
 
     _syncCustomRow();
     if(_reportsServer) renderReportDetail(_reportsServer);
+    else if(_historyMode === 'section') renderSectionList();
     else renderReportsList();
   });
 });
@@ -3454,6 +3700,7 @@ document.querySelectorAll('.rpt-tab').forEach(tab=>{
   if(el) el.addEventListener('change', ()=>{
     if(_reportsPeriod !== 'custom') return;
     if(_reportsServer) renderReportDetail(_reportsServer);
+    else if(_historyMode === 'section') renderSectionList();
     else renderReportsList();
   });
 });
