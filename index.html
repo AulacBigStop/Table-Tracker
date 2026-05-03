@@ -1585,12 +1585,26 @@ function renderFloor(){
     // Use moved position if set, otherwise original
     const rpos = st.movedPos[id] ? {...pos, l:st.movedPos[id].l, t:st.movedPos[id].t} : pos;
 
+    // If the table is seated under a different section than its natural layout
+    // section, draw an outline in the colour of the natural section so staff
+    // can see where the table actually "lives" on the floor.
+    const naturalSec = s;
+    const isReassigned = seated && !d.cutTable && (colorSec !== naturalSec);
+    const outlineColor = isReassigned ? FLOOR_C[naturalSec]?.bg : null;
+    // Seats (benches/chairs) match the outline colour when reassigned
+    const seatColor = outlineColor ?? c.bg;
+    // Outline style applied to the main table surface
+    const outlineCss = outlineColor
+      ? `outline:3px solid ${outlineColor};outline-offset:-1px;`
+      : '';
+
     if(pos.s === 'booth' || pos.s === 'booth-bot2' || pos.s === 'booth-top2' || pos.s === 'booth-top1' || pos.s === 'booth-h'){
-      const tableColor = darkenHex(c.bg);
+      const tableColor = c.bg;
+      const benchColor = seated ? seatColor : darkenHex(seatColor, 0.6);
 
       function mkBench(radiusTop, radiusBot){
         const b = document.createElement('div');
-        b.style.cssText = `flex:0 0 22%;background:${c.bg};border-radius:${radiusTop}px ${radiusTop}px ${radiusBot}px ${radiusBot}px;border:1.5px solid rgba(0,0,0,0.25);`;
+        b.style.cssText = `flex:0 0 22%;background:${benchColor};border-radius:${radiusTop}px ${radiusTop}px ${radiusBot}px ${radiusBot}px;border:1.5px solid rgba(0,0,0,0.25);`;
         return b;
       }
       function mk2Chairs(){
@@ -1598,7 +1612,7 @@ function renderFloor(){
         row.style.cssText = `flex:0 0 22%;display:flex;gap:6%;justify-content:center;`;
         for(let i=0;i<2;i++){
           const ch = document.createElement('div');
-          ch.style.cssText = `flex:0 0 38%;background:${c.bg};border-radius:3px;border:1.5px solid rgba(0,0,0,0.25);`;
+          ch.style.cssText = `flex:0 0 38%;background:${benchColor};border-radius:3px;border:1.5px solid rgba(0,0,0,0.25);`;
           row.appendChild(ch);
         }
         return row;
@@ -1607,13 +1621,13 @@ function renderFloor(){
         const row = document.createElement('div');
         row.style.cssText = `flex:0 0 22%;display:flex;justify-content:center;`;
         const ch = document.createElement('div');
-        ch.style.cssText = `flex:0 0 55%;background:${c.bg};border-radius:3px;border:1.5px solid rgba(0,0,0,0.25);`;
+        ch.style.cssText = `flex:0 0 55%;background:${benchColor};border-radius:3px;border:1.5px solid rgba(0,0,0,0.25);`;
         row.appendChild(ch);
         return row;
       }
       function mkBenchH(radiusL, radiusR){
         const b = document.createElement('div');
-        b.style.cssText = `flex:0 0 22%;background:${c.bg};border-radius:${radiusL}px ${radiusR}px ${radiusR}px ${radiusL}px;border:1.5px solid rgba(0,0,0,0.25);`;
+        b.style.cssText = `flex:0 0 22%;background:${benchColor};border-radius:${radiusL}px ${radiusR}px ${radiusR}px ${radiusL}px;border:1.5px solid rgba(0,0,0,0.25);`;
         return b;
       }
 
@@ -1626,7 +1640,7 @@ function renderFloor(){
 
       const tbl = document.createElement('div');
       tbl.style.cssText = `flex:1;background:${tableColor};border-radius:3px;border:1.5px solid rgba(0,0,0,0.3);
-        display:flex;flex-direction:column;align-items:center;justify-content:center;`;
+        display:flex;flex-direction:column;align-items:center;justify-content:center;${outlineCss}`;
       const numSpan = document.createElement('span');
       numSpan.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:clamp(10px,2vw,22px);font-weight:700;color:${c.tx};line-height:1;`;
       numSpan.textContent = id;
@@ -1642,7 +1656,8 @@ function renderFloor(){
       flr.appendChild(wrap);
 
     } else if(pos.s === 'corner-booth' || pos.s === 'corner-booth-ccw'){
-      const tableColor = darkenHex(c.bg);
+      const tableColor = c.bg;
+      const benchColor = seated ? seatColor : darkenHex(seatColor, 0.6);
 
       const wrap = document.createElement('div');
       wrap.style.cssText = `position:absolute;left:${rpos.l}%;top:${rpos.t}%;width:${rpos.w}%;height:${rpos.h}%;
@@ -1652,21 +1667,21 @@ function renderFloor(){
       if(pos.s === 'corner-booth'){
         // bench top + bench left, table bottom-right
         const benchTop  = document.createElement('div');
-        benchTop.style.cssText  = `position:absolute;top:0;left:0;right:0;height:22%;background:${c.bg};border-radius:4px 4px 2px 2px;border:1.5px solid rgba(0,0,0,0.25);`;
+        benchTop.style.cssText  = `position:absolute;top:0;left:0;right:0;height:22%;background:${benchColor};border-radius:4px 4px 2px 2px;border:1.5px solid rgba(0,0,0,0.25);`;
         const benchLeft = document.createElement('div');
-        benchLeft.style.cssText = `position:absolute;top:26%;left:0;width:22%;bottom:0;background:${c.bg};border-radius:2px 2px 4px 4px;border:1.5px solid rgba(0,0,0,0.25);`;
+        benchLeft.style.cssText = `position:absolute;top:26%;left:0;width:22%;bottom:0;background:${benchColor};border-radius:2px 2px 4px 4px;border:1.5px solid rgba(0,0,0,0.25);`;
         const tblSurf   = document.createElement('div');
-        tblSurf.style.cssText   = `position:absolute;top:26%;left:26%;right:0;bottom:0;background:${tableColor};border-radius:3px;border:1.5px solid rgba(0,0,0,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;`;
+        tblSurf.style.cssText   = `position:absolute;top:26%;left:26%;right:0;bottom:0;background:${tableColor};border-radius:3px;border:1.5px solid rgba(0,0,0,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;${outlineCss}`;
         wrap.appendChild(benchTop); wrap.appendChild(benchLeft); wrap.appendChild(tblSurf);
         const n=document.createElement('span'); n.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:clamp(10px,2vw,22px);font-weight:700;color:${c.tx};line-height:1;`; n.textContent=id; tblSurf.appendChild(n);
       } else {
         // corner-booth-ccw: bench bottom + bench left, table top-right
         const benchBot  = document.createElement('div');
-        benchBot.style.cssText  = `position:absolute;bottom:0;left:0;right:0;height:22%;background:${c.bg};border-radius:2px 2px 4px 4px;border:1.5px solid rgba(0,0,0,0.25);`;
+        benchBot.style.cssText  = `position:absolute;bottom:0;left:0;right:0;height:22%;background:${benchColor};border-radius:2px 2px 4px 4px;border:1.5px solid rgba(0,0,0,0.25);`;
         const benchLeft = document.createElement('div');
-        benchLeft.style.cssText = `position:absolute;top:0;left:0;width:22%;bottom:26%;background:${c.bg};border-radius:4px 4px 2px 2px;border:1.5px solid rgba(0,0,0,0.25);`;
+        benchLeft.style.cssText = `position:absolute;top:0;left:0;width:22%;bottom:26%;background:${benchColor};border-radius:4px 4px 2px 2px;border:1.5px solid rgba(0,0,0,0.25);`;
         const tblSurf   = document.createElement('div');
-        tblSurf.style.cssText   = `position:absolute;top:0;left:26%;right:0;bottom:26%;background:${tableColor};border-radius:3px;border:1.5px solid rgba(0,0,0,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;`;
+        tblSurf.style.cssText   = `position:absolute;top:0;left:26%;right:0;bottom:26%;background:${tableColor};border-radius:3px;border:1.5px solid rgba(0,0,0,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;${outlineCss}`;
         wrap.appendChild(benchBot); wrap.appendChild(benchLeft); wrap.appendChild(tblSurf);
         const n=document.createElement('span'); n.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:clamp(10px,2vw,22px);font-weight:700;color:${c.tx};line-height:1;`; n.textContent=id; tblSurf.appendChild(n);
       }
@@ -1676,6 +1691,7 @@ function renderFloor(){
 
     } else if(pos.s === 'rect-v' || pos.s === 'rect-v4'){
       const chairs = pos.s === 'rect-v4' ? 2 : 1;
+      const benchColor = seated ? seatColor : darkenHex(seatColor, 0.6);
       const wrap = document.createElement('div');
       wrap.style.cssText = `position:absolute;left:${rpos.l}%;top:${rpos.t}%;width:${rpos.w}%;height:${rpos.h}%;
         display:flex;flex-direction:column;align-items:center;justify-content:space-between;cursor:pointer;
@@ -1687,7 +1703,7 @@ function renderFloor(){
         row.style.cssText = `width:100%;height:14%;display:flex;gap:6%;justify-content:center;flex-shrink:0;`;
         for(let i=0;i<chairs;i++){
           const ch = document.createElement('div');
-          ch.style.cssText = `flex:0 0 ${chairs===2?'38%':'55%'};background:${c.bg};border-radius:3px;border:1.5px solid rgba(0,0,0,0.25);`;
+          ch.style.cssText = `flex:0 0 ${chairs===2?'38%':'55%'};background:${benchColor};border-radius:3px;border:1.5px solid rgba(0,0,0,0.25);`;
           row.appendChild(ch);
         }
         return row;
@@ -1695,7 +1711,7 @@ function renderFloor(){
 
       const tableEl = document.createElement('div');
       tableEl.style.cssText = `width:${chairs===2?'95%':'80%'};flex:1;margin:4% 0;background:${c.bg};border-radius:4px;
-        border:2px solid rgba(0,0,0,0.25);
+        border:2px solid rgba(0,0,0,0.25);${outlineCss}
         display:flex;flex-direction:column;align-items:center;justify-content:center;`;
       const numSpan = document.createElement('span');
       numSpan.style.cssText=`font-family:'IBM Plex Mono',monospace;font-size:clamp(10px,2vw,22px);font-weight:700;color:${c.tx};line-height:1;`;
@@ -1711,7 +1727,7 @@ function renderFloor(){
     } else {
       const el=document.createElement('div');
       el.className=`tbl ${pos.s} ${seated?'seated':'empty'}`;
-      el.style.cssText=`left:${rpos.l}%;top:${rpos.t}%;width:${rpos.w}%;height:${rpos.h}%;background:${c.bg};color:${c.tx};`;
+      el.style.cssText=`left:${rpos.l}%;top:${rpos.t}%;width:${rpos.w}%;height:${rpos.h}%;background:${c.bg};color:${c.tx};${outlineCss}`;
       if(seated){
         el.innerHTML=`<span class="tbl-n">${id}</span>`;
       } else {
@@ -3186,8 +3202,36 @@ async function openReports(){
   document.querySelectorAll('.rpt-tab').forEach(t=>
     t.classList.toggle('active', t.dataset.period === _reportsPeriod));
   _syncCustomRow();
-  _historyCache = await fetchHistory();
+  const firebaseHistory = await fetchHistory();
+  // Merge the current shift's live shiftRecord into the cache so reports
+  // show today's numbers even before a New Day reset is done.
+  _historyCache = mergeCurrentShift(firebaseHistory);
   renderReportsList();
+}
+
+// Merge st.shiftRecord (current in-progress shift) into the Firebase history
+// object under a synthetic shift key 's_live_[today]' so it shows in reports.
+function mergeCurrentShift(history){
+  const merged = JSON.parse(JSON.stringify(history || {})); // deep clone
+  const today = new Date().toLocaleDateString('en-CA');
+  const liveKey = 's_live_' + today;
+  for(const [name, data] of Object.entries(st.shiftRecord || {})){
+    if(!(data.guests > 0) && !(data.turns && data.turns.length)) continue;
+    const turns = Array.isArray(data.turns) ? data.turns : [];
+    const avg = turns.length ? Math.round(turns.reduce((a,b)=>a+b,0)/turns.length) : null;
+    const key = sanitizeHistoryKey(name);
+    if(!merged[key]) merged[key] = {};
+    merged[key][liveKey] = {
+      date:    today,
+      guests:  data.guests || 0,
+      tables:  turns.length,
+      avgTurn: avg,
+      minTurn: turns.length ? Math.min(...turns) : null,
+      maxTurn: turns.length ? Math.max(...turns) : null,
+      live:    true  // flag so we can label it "In Progress" in the UI
+    };
+  }
+  return merged;
 }
 
 function closeReports(){
@@ -3218,7 +3262,11 @@ function getFilterRange(period){
   return {from: 0, to: now}; // all time
 }
 
-function getShiftTs(id){ return parseInt(id.replace('s_','')); }
+function getShiftTs(id){
+  if(id.startsWith('s_live_')) return Date.now(); // always today
+  return parseInt(id.replace('s_',''));
+}
+function isLiveShift(id){ return id.startsWith('s_live_'); }
 
 function aggregateForServer(serverShifts, period){
   const {from, to} = getFilterRange(period);
@@ -3233,7 +3281,7 @@ function aggregateForServer(serverShifts, period){
       turnTotal += s.avgTurn * s.tables;
       turnCount += s.tables;
     }
-    shiftList.push({ts, ...s});
+    shiftList.push({id, ts, ...s});
   }
   shiftList.sort((a,b)=>b.ts-a.ts);
   const avgTurn = turnCount > 0 ? Math.round(turnTotal/turnCount) : null;
@@ -3243,26 +3291,37 @@ function aggregateForServer(serverShifts, period){
 function renderReportsList(){
   const content = document.getElementById('reports-content');
   const history = _historyCache || {};
-  // Union of active name list + names in history
-  const nameSet = new Set([
-    ...SERVER_NAME_LIST,
-    ...Object.keys(history).map(k => {
-      // reverse sanitize: Firebase key -> try to match a name
-      for(const n of SERVER_NAME_LIST){ if(sanitizeHistoryKey(n)===k) return n; }
-      return k; // fall back to key itself
-    })
-  ]);
+
+  // Build list from names that have any history key in the cache,
+  // plus names in the current name list who have live shift data.
+  const nameSet = new Set();
+  // From Firebase history (reverse-sanitize key back to name)
+  for(const key of Object.keys(history)){
+    let matched = false;
+    for(const n of SERVER_NAME_LIST){
+      if(sanitizeHistoryKey(n) === key){ nameSet.add(n); matched = true; break; }
+    }
+    if(!matched) nameSet.add(key); // use key as fallback name
+  }
+
   if(nameSet.size === 0){
-    content.innerHTML = '<p class="rpt-no-data">No server history yet.<br>History is recorded when you start a New Day.</p>';
+    content.innerHTML = '<p class="rpt-no-data">No server history yet.<br>Guests and turn times are recorded live during a shift — open Reports again after seating some tables.</p>';
     return;
   }
+
   const rows = [];
   for(const name of [...nameSet].sort()){
     const key = sanitizeHistoryKey(name);
     const agg = aggregateForServer(history[key], _reportsPeriod);
+    if(agg.guests === 0 && agg.tables === 0) continue; // skip zero-data rows
     rows.push({name, ...agg});
   }
   rows.sort((a,b)=>b.guests-a.guests);
+
+  if(rows.length === 0){
+    content.innerHTML = '<p class="rpt-no-data">No data for this period.</p>';
+    return;
+  }
 
   let html = '';
   for(const r of rows){
@@ -3281,7 +3340,7 @@ function renderReportsList(){
       <div style="color:var(--dim);font-size:18px;padding-left:4px;flex-shrink:0;">›</div>
     </div>`;
   }
-  content.innerHTML = html || '<p class="rpt-no-data">No data for this period.</p>';
+  content.innerHTML = html;
   content.querySelectorAll('.rpt-server-row').forEach(row=>{
     row.addEventListener('pointerup', ()=>{
       _reportsServer = row.dataset.name;
@@ -3329,7 +3388,10 @@ function renderReportDetail(name){
       <div style="text-align:right;">TABLES</div><div style="text-align:right;">AVG TURN</div>
     </div>`;
     for(const s of periodAgg.shiftList){
-      const dateStr = new Date(s.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',weekday:'short'});
+      const isLive = isLiveShift(s.id || '');
+      const dateStr = isLive
+        ? '<span style="color:#ffc800;font-size:10px;">● IN PROGRESS</span>'
+        : new Date(s.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',weekday:'short'});
       shiftRows += `<div class="rpt-shift-row">
         <div>${dateStr}</div>
         <div style="text-align:right;">${s.guests}</div>
@@ -3873,7 +3935,7 @@ hr {
     <div class="guide-header">
   <div class="guide-title">⬡ Aulac Big Stop</div>
   <h1>Table Tracker<br>Staff Guide</h1>
-  <p>Everything you need to run the host stand — v1.4</p>
+  <p>Everything you need to run the host stand — v1.5</p>
 </div>
 
 <!-- GETTING STARTED -->
