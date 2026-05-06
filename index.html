@@ -997,13 +997,17 @@ function pushCutHistory(rec){
   }
 }
 
+// Guard prevents double-open if ✂ is tapped twice quickly
+let _cutModalActive = false;
+
 function showCutModal(s){
+  if(_cutModalActive){ console.warn('[CutModal] Already open — ignoring'); return; }
+  _cutModalActive = true;
+
   const name = st.names[s] || `Server ${s}`;
   document.getElementById('cut-modal-title').textContent = `✂  Cut ${name}`;
   const modal = document.getElementById('cut-modal');
   modal.style.display = 'flex';
-
-  document.getElementById('cut-modal-cancel').onpointerup = () => { modal.style.display='none'; };
 
   // Show which server will auto-replace in the subtitle
   const activeServers = Array.from({length:st.servers},(_,i)=>i+1)
@@ -1016,53 +1020,74 @@ function showCutModal(s){
   document.getElementById('cut-opt-auto').style.opacity = bottomSrv ? '1' : '0.35';
   document.getElementById('cut-opt-auto').style.pointerEvents = bottomSrv ? '' : 'none';
 
-  // Option 1: Replace with a new server (takes over the same slot)
-  document.getElementById('cut-opt-replace').onpointerup = () => {
+  function closeCutModal(){
     modal.style.display = 'none';
+    _cutModalActive = false;
+    cancelBtn.removeEventListener('pointerup', handleCancel);
+    replaceBtn.removeEventListener('pointerup', handleReplace);
+    autoBtn.removeEventListener('pointerup', handleAuto);
+    removeBtn.removeEventListener('pointerup', handleRemove);
+  }
+
+  const cancelBtn  = document.getElementById('cut-modal-cancel');
+  const replaceBtn = document.getElementById('cut-opt-replace');
+  const autoBtn    = document.getElementById('cut-opt-auto');
+  const removeBtn  = document.getElementById('cut-opt-remove');
+
+  function handleCancel(){ closeCutModal(); }
+
+  // Option 1: Replace with a new server (takes over the same slot)
+  function handleReplace(){
+    closeCutModal();
     showNamePicker(`NAME FOR REPLACEMENT IN SECTION ${s}`, (chosenName) => {
       showTimePicker(chosenName, (endTime) => {
-      // Save old server's identity to cut history
-      pushCutHistory({ slot: s, name, guestCount: Math.round(secGuestScore(s)) });
-      // Mark existing seated tables as cut, stamping the original server's name
-      Object.keys(st.tables).forEach(tid => {
-        const d = st.tables[+tid];
-        const tSec = d.coverageSec || d.sec || secOf(+tid);
-        if(tSec === s) st.tables[+tid] = {...d, cutTable: true, seatedByName: name};
+        pushCutHistory({ slot: s, name, guestCount: Math.round(secGuestScore(s)) });
+        Object.keys(st.tables).forEach(tid => {
+          const d = st.tables[+tid];
+          const tSec = d.coverageSec || d.sec || secOf(+tid);
+          if(tSec === s) st.tables[+tid] = {...d, cutTable: true, seatedByName: name};
+        });
+        st.names[s] = chosenName;
+        if(endTime) st.endTimes[s] = endTime; else delete st.endTimes[s];
+        const active = Array.from({length:st.servers},(_,i)=>i+1)
+          .filter(x => !st.cutServers.has(x) && !st.onBreak.has(x) && x !== s);
+        st.guestTotals[s] = active.length
+          ? Math.round(active.reduce((a,x)=>a+(st.guestTotals[x]||0),0)/active.length) : 0;
+        st.newServers.add(s);
+        st.onBreak.delete(s);
+        if(st.selectedSec === s) st.selectedSec = null;
+        snapshotState();
+        commitImmediate();
       });
-      // Rename slot to new server
-      st.names[s] = chosenName;
-      if(endTime) st.endTimes[s] = endTime; else delete st.endTimes[s];
-      // New server starts at average of active peers
-      const active = Array.from({length:st.servers},(_,i)=>i+1)
-        .filter(x => !st.cutServers.has(x) && !st.onBreak.has(x) && x !== s);
-      st.guestTotals[s] = active.length
-        ? Math.round(active.reduce((a,x)=>a+(st.guestTotals[x]||0),0)/active.length) : 0;
-      st.newServers.add(s);
-      st.onBreak.delete(s);
-      if(st.selectedSec === s) st.selectedSec = null;
-      snapshotState();
-      commitImmediate();
-      }); // end showTimePicker
     });
-  };
+  }
 
-  // Option 1b: Auto-replace with bottom server
-  document.getElementById('cut-opt-auto').onpointerup = () => {
-    modal.style.display = 'none';
-    const active = Array.from({length:st.servers},(_,i)=>i+1)
+  // Option 2: Auto-replace with bottom server
+  function handleAuto(){
+    closeCutModal();
+    // Re-read active servers at execution time (not at modal-open time)
+    const currentActive = Array.from({length:st.servers},(_,i)=>i+1)
       .filter(x => x !== s && !st.cutServers.has(x));
-    const autoSec = active[active.length - 1];
-    if(!autoSec) return;
+    const autoSec = currentActive[currentActive.length - 1];
+    if(!autoSec){
+      console.warn('[CutModal] Auto: no available server to replace');
+      return;
+    }
     executeReplaceWithExisting(s, name, autoSec);
-  };
+  }
 
-  // Option 2: Choose replacement manually
-  document.getElementById('cut-opt-remove').onpointerup = () => {
-    modal.style.display = 'none';
+  // Option 3: Choose replacement manually
+  function handleRemove(){
+    closeCutModal();
     showSrvPicker(`MOVE INTO SECTION ${s}`, s, (replaceSec) => {
       executeReplaceWithExisting(s, name, replaceSec);
     });
-  };
+  }
+
+  cancelBtn.addEventListener('pointerup', handleCancel);
+  replaceBtn.addEventListener('pointerup', handleReplace);
+  autoBtn.addEventListener('pointerup', handleAuto);
+  removeBtn.addEventListener('pointerup', handleRemove);
 }
 
 function executeReplaceWithExisting(s, name, replaceSec){
@@ -3038,6 +3063,7 @@ renderAll(); // seeds undo stack via snapshotState inside renderAll
       _fbPushPending = false;
       _localDirty = false;
       _confirmActive = false;
+      _cutModalActive = false;
       _renderScheduled = false;
       st._modalCooldown = false;
       // Close any open confirm overlay
@@ -3046,6 +3072,9 @@ renderAll(); // seeds undo stack via snapshotState inside renderAll
       // Close manager menu if stuck open
       const mgrModal = document.getElementById('manager-modal');
       if(mgrModal) mgrModal.style.display = 'none';
+      // Close cut-modal if stuck open
+      const cutModal = document.getElementById('cut-modal');
+      if(cutModal){ cutModal.style.display = 'none'; _cutModalActive = false; }
       // Close adjust-counts modal if stuck open
       const adjModal = document.getElementById('adjust-counts-modal');
       if(adjModal) adjModal.style.display = 'none';
