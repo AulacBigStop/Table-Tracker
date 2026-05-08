@@ -199,13 +199,31 @@ body{display:flex;flex-direction:row;height:100vh;height:100dvh;-webkit-user-sel
 .mbtn-g{padding:12px;border-radius:9px;border:1px solid var(--border);background:transparent;
   color:var(--dim);font-family:'IBM Plex Sans',sans-serif;font-size:14px;cursor:pointer;}
 
+/* ── ACTIVITY LOG MODAL */
+#activity-log-modal{background:#12121a;flex-direction:column;}
+.log-hdr{display:flex;align-items:center;padding:14px 16px 0;flex-shrink:0;gap:8px;}
+.log-title{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:#7dd8f8;flex:1;letter-spacing:.5px;}
+#log-close{background:none;border:1px solid rgba(255,255,255,.12);color:var(--dim);font-size:16px;width:34px;height:34px;border-radius:8px;cursor:pointer;padding:0;font-family:'IBM Plex Mono',monospace;touch-action:manipulation;}
+.log-filters{display:flex;gap:5px;padding:10px 16px;flex-shrink:0;flex-wrap:wrap;}
+.log-filter{padding:5px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);
+  color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;cursor:pointer;letter-spacing:.3px;touch-action:manipulation;}
+.log-filter.active{background:rgba(100,200,255,.12);border-color:rgba(100,200,255,.35);color:#7dd8f8;}
+#log-content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 12px 16px;}
+.log-entry{display:flex;gap:8px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.05);align-items:flex-start;}
+.log-entry:last-child{border-bottom:none;}
+.log-pill{flex-shrink:0;padding:2px 7px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.3px;line-height:18px;align-self:flex-start;margin-top:1px;}
+.log-sec-badge{flex-shrink:0;min-width:28px;padding:0 5px;border-radius:5px;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;line-height:18px;text-align:center;align-self:flex-start;margin-top:1px;white-space:nowrap;}
+.log-time{flex-shrink:0;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);min-width:46px;text-align:right;line-height:20px;}
+.log-msg{font-size:12px;color:var(--text);line-height:1.5;flex:1;}
+.log-no-data{text-align:center;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:12px;padding:40px 0;line-height:1.8;}
 /* iOS tap delay fix */
 button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
 #btn-undo, #btn-redo, #btn-reset-pos, #btn-manager,
 #confirm-yes, #confirm-no, #pwd-confirm, #pwd-cancel, #login-btn,
 #adjust-counts-done, #mgr-opt-adjust, #mgr-opt-clear, #mgr-opt-counts, #mgr-opt-logout, #mgr-modal-cancel,
-#mgr-opt-reports, #mgr-opt-names, #edit-names-add, #edit-names-done,
-#reports-close, .rpt-tab, .rpt-server-row, #rpt-back-btn {
+#mgr-opt-reports, #mgr-opt-names, #mgr-opt-log, #edit-names-add, #edit-names-done,
+#reports-close, .rpt-tab, .rpt-server-row, #rpt-back-btn,
+#log-close, .log-filter {
   touch-action: manipulation;
   -webkit-user-select: none;
   user-select: none;
@@ -398,6 +416,10 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
       📊 Server Reports<br>
       <span style="font-size:10px;opacity:.6;font-weight:400;">Guests · tables · avg turn time · per shift breakdown</span>
     </button>
+    <button id="mgr-opt-log" style="padding:14px 16px;border-radius:10px;border:1px solid rgba(100,200,255,0.25);background:rgba(100,200,255,0.06);color:#7dd8f8;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;text-align:left;">
+      📋 Activity Log<br>
+      <span style="font-size:10px;opacity:.6;font-weight:400;">Timestamped record of all table & server events</span>
+    </button>
     <button id="mgr-opt-names" style="padding:14px 16px;border-radius:10px;border:1px solid rgba(255,200,0,0.25);background:rgba(255,200,0,0.06);color:#ffc800;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;text-align:left;">
       ✏ Edit Server Names<br>
       <span style="font-size:10px;opacity:.6;font-weight:400;">Add or remove names from the master list</span>
@@ -420,6 +442,25 @@ button, .sec-row, .pb, .act-btn, .sec-adj-btn, .break-btn, .srv-adj-btn,
     </button>
     <button id="mgr-modal-cancel" style="padding:11px;border-radius:9px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;touch-action:manipulation;">Cancel</button>
   </div>
+</div>
+
+<!-- ACTIVITY LOG MODAL (manager only) -->
+<div id="activity-log-modal" style="display:none;position:fixed;inset:0;z-index:900;">
+  <div class="log-hdr">
+    <div class="log-title">📋 ACTIVITY LOG</div>
+    <button id="log-close">✕</button>
+  </div>
+  <div class="log-filters" id="log-filters">
+    <button class="log-filter active" data-filter="ALL">All</button>
+    <button class="log-filter" data-filter="SEAT">Seated</button>
+    <button class="log-filter" data-filter="UPDATE">Updated</button>
+    <button class="log-filter" data-filter="CLEAR">Cleared</button>
+    <button class="log-filter" data-filter="TRANSFER">Transfer</button>
+    <button class="log-filter" data-filter="CUT">Cut</button>
+    <button class="log-filter" data-filter="ADD_SRV">Added</button>
+    <button class="log-filter" data-filter="BREAK_ON,BREAK_OFF">Break</button>
+  </div>
+  <div id="log-content"></div>
 </div>
 
 <!-- REPORTS MODAL (full-screen, manager only) -->
@@ -592,8 +633,11 @@ const st = {
   cutServers: new Set(),   // servers cut without replacement (slot excluded from rotation)
   cutHistory: [],          // [{slot, name, guestCount}] — servers replaced in-place
   endTimes:   {},          // {serverNum: 'HH:MM'} — shift end time per server
-  shiftRecord:{},          // {name:{guests,turns[]}} — current-shift stats by server name
-  sectionRecord:{},        // {secNum:{guests,turns[]}} — current-shift stats by section number
+  shiftRecord:{},          // {name:{guests,turns[]}} — current-shift accumulator (reset on New Day)
+  sectionRecord:{},        // {secNum:{guests,turns[]}} — current-shift section accumulator
+  history:{},              // {sanitizedName:{shiftId:{date,guests,tables,avgTurn,...}}} — all-time
+  sectionHistory:{},       // {sec_N:{shiftId:{...}}} — all-time section history
+  activityLog:[],          // [{ts,type,msg}] — timestamped event log
   selectedSec: null,
   rotMode: false,
   mTable:null, mParty:null, mGroup:null, mMultiSec:null, mMultiStep:0, mOverrideSec:null,
@@ -628,6 +672,9 @@ function stateToObj(){
     endTimes:    st.endTimes,
     shiftRecord: st.shiftRecord,
     sectionRecord: st.sectionRecord,
+    history:       st.history,
+    sectionHistory:st.sectionHistory,
+    activityLog:   st.activityLog,
     selectedSec: st.selectedSec ?? null,
     nameList:    SERVER_NAME_LIST
   };
@@ -704,6 +751,9 @@ function deserializeState(data, restoreStacks = true){
   st.endTimes    = data.endTimes   ?? {};
   st.shiftRecord   = data.shiftRecord   ?? {};
   st.sectionRecord = data.sectionRecord ?? {};
+  st.history       = data.history       ?? {};
+  st.sectionHistory= data.sectionHistory?? {};
+  st.activityLog   = data.activityLog   ?? [];
   st.selectedSec = data.selectedSec ?? null;
   if(data.nameList && Array.isArray(data.nameList) && data.nameList.length > 0){
     SERVER_NAME_LIST = data.nameList;
@@ -1146,7 +1196,7 @@ function executeReplaceWithExisting(s, name, replaceSec){
   st.servers = Math.max(2, last - 1);
   document.getElementById('srv-count').textContent = st.servers;
   if(st.selectedSec === s || st.selectedSec === replaceSec || st.selectedSec === last) st.selectedSec = null;
-
+  logActivity('CUT', `${name} cut — ${replaceName} now covers Section ${s}`, s);
   snapshotState();
   commitImmediate();
 }
@@ -1263,6 +1313,7 @@ function renderRot(){
             }
           }
           // Coffee break: guest count unchanged
+          logActivity('BREAK_OFF', `${name} returned from ${type||'break'}`, s);
           snapshotState(); renderRot();
         });
       } else {
@@ -1274,8 +1325,8 @@ function renderRot(){
           modal.style.display = 'none';
           st.onBreak.add(s);
           st.breakType[s] = type;
-          // If this server is now the lowest but being auto-skipped, catch them up
           if(type === 'coffee') tickCoffeeBreakServers();
+          logActivity('BREAK_ON', `${name} on ${type} break`, s);
           snapshotState(); renderRot();
         };
         document.getElementById('break-opt-meal').onpointerup   = () => doBreak('meal');
@@ -1499,7 +1550,7 @@ function addEvent(type, guests){
   if(!st.guestTotals[s]) st.guestTotals[s] = 0;
   const g = guests || (type==='S' ? 1 : type==='D' ? 1 : 3);
   st.guestTotals[s] += g;
-  if(type !== 'D'){ st.dailyGuests += g; recordShiftGuests(st.names[s] || `Server ${s}`, g); }
+  if(type !== 'D'){ st.dailyGuests += g; recordShiftSkips(st.names[s] || `Server ${s}`, g); }
   st.dailyTables++;
   st.newServers.delete(s);
   st.selectedSec = null;
@@ -2314,9 +2365,11 @@ function doSeatTable(id, party, secOverride){
       const type = party===1 ? 'S' : party>=5 ? 'XL' : 'X';
       addEventToSec(s, type, party);
       recordSectionGuests(secOf(id), party); // natural section (not assigned server)
+      logActivity('SEAT', `Table ${id} seated — ${party} guest${party!==1?'s':''} (${st.names[s]||`Server ${s}`})`, s);
     } else if(prevParty !== 0 && prevParty !== party){
       if(!st.guestTotals[s]) st.guestTotals[s] = 0;
       st.guestTotals[s] += (party - prevParty);
+      logActivity('UPDATE', `Table ${id} updated — ${prevParty}→${party} guests (${st.names[s]||`Server ${s}`})`, s);
       renderRot();
     }
   }
@@ -2373,11 +2426,14 @@ function doSeat(){
     if(s && st.mParty !== 0 && !prevParty){
       const type = st.mParty===1 ? 'S' : st.mParty>=5 ? 'XL' : 'X';
       addEventToSec(s, type, st.mParty);
-      // Record for each table's natural section (one entry per table in group)
       for(const gid of ids) recordSectionGuests(secOf(gid), st.mParty);
+      const tblList = ids.join('+');
+      logActivity('SEAT', `Table${ids.length>1?'s':''} ${tblList} seated — ${st.mParty} guest${st.mParty!==1?'s':''} (${st.names[s]||`Server ${s}`})`, s);
     } else if(s && st.mParty !== 0 && prevParty && prevParty !== 0 && prevParty !== st.mParty){
       if(!st.guestTotals[s]) st.guestTotals[s]=0;
       st.guestTotals[s] += (st.mParty - prevParty);
+      const tblList = ids.join('+');
+      logActivity('UPDATE', `Table${ids.length>1?'s':''} ${tblList} updated — ${prevParty}→${st.mParty} guests (${st.names[s]||`Server ${s}`})`, s);
       renderRot();
     }
     renderFloor(); renderStatus();
@@ -2413,6 +2469,10 @@ function doTransfer(group){
       if(!d) continue;
       st.tables[gid] = {...d, sec: newSec, coverageSec: newSec, seatedByName: st.names[newSec]||`Server ${newSec}`};
     }
+    const tblList = [...group].join('+');
+    const fromName = st.names[currentSec] || `Server ${currentSec}`;
+    const toName   = st.names[newSec]     || `Server ${newSec}`;
+    logActivity('TRANSFER', `Table${group.size>1?'s':''} ${tblList} transferred: ${fromName} → ${toName}`);
     snapshotState();
     renderAll();
   });
@@ -2424,9 +2484,13 @@ function doClear(){
     const d = st.tables[gid];
     // Record turn time for this table before clearing
     if(d && d.party > 0 && d.seatedAt){
-      const name = d.seatedByName || st.names[d.coverageSec != null ? +d.coverageSec : d.sec] || null;
+      const sec  = d.coverageSec != null ? +d.coverageSec : (d.sec != null ? +d.sec : null);
+      const name = d.seatedByName || (sec != null ? st.names[sec] : null) || null;
       if(name) recordShiftTurn(name, d.seatedAt);
       recordSectionTurn(secOf(gid), d.seatedAt); // natural section
+      const mins = d.seatedAt ? Math.round((Date.now()-d.seatedAt)/60000) : null;
+      const durStr = mins != null ? ` — ${mins}m` : '';
+      logActivity('CLEAR', `Table ${gid} cleared${durStr}${name ? ` (${name})` : ''}`, sec);
     }
     delete st.tables[gid];
     delete st.movedPos[gid];
@@ -2512,6 +2576,7 @@ function applyServerCount(newCount){
         const removedName  = st.names[s] || `Server ${s}`;
         const removedScore = Math.round(secGuestScore(s));
         pushCutHistory({ slot: s, name: removedName, guestCount: removedScore });
+        logActivity('CUT', `${removedName} removed from floor (Section ${s})`, s);
         // Mark their seated tables amber-brown
         Object.keys(st.tables).forEach(tid => {
           const d = st.tables[+tid];
@@ -2593,6 +2658,7 @@ document.getElementById('srv-inc').addEventListener('pointerup', e=>{
       applyServerCount(newNum);
       st.names[newNum] = chosenName;
       if(endTime) st.endTimes[newNum] = endTime;
+      logActivity('ADD_SRV', `${chosenName} added to floor (Section ${newNum})`, newNum);
       renderAll();
     });
   });
@@ -2660,6 +2726,72 @@ document.getElementById('btn-manager').addEventListener('pointerup', ()=>{
 // Cancel button
 document.getElementById('mgr-modal-cancel').addEventListener('pointerup', closeManagerMenu);
 
+// Option: Activity Log
+document.getElementById('mgr-opt-log').addEventListener('pointerup', ()=>{
+  closeManagerMenu();
+  openActivityLog();
+});
+
+let _logFilter = 'ALL';
+
+function openActivityLog(){
+  _logFilter = 'ALL';
+  document.querySelectorAll('.log-filter').forEach(b=>
+    b.classList.toggle('active', b.dataset.filter === 'ALL'));
+  renderActivityLog();
+  document.getElementById('activity-log-modal').style.display = 'flex';
+}
+function closeActivityLog(){
+  document.getElementById('activity-log-modal').style.display = 'none';
+}
+
+function renderActivityLog(){
+  const content = document.getElementById('log-content');
+  const entries = st.activityLog || [];
+  const filtered = _logFilter === 'ALL'
+    ? entries
+    : entries.filter(e => _logFilter.split(',').includes(e.type));
+
+  if(filtered.length === 0){
+    content.innerHTML = '<div class="log-no-data">No events recorded yet.<br>Events appear as tables are seated, cleared, transferred, etc.</div>';
+    return;
+  }
+
+  let html = '';
+  for(const entry of filtered){
+    const def   = LOG_TYPES[entry.type] || {label:entry.type, color:'#888'};
+    const d     = new Date(entry.ts);
+    const h     = d.getHours() % 12 || 12;
+    const m     = String(d.getMinutes()).padStart(2,'0');
+    const ap    = d.getHours() < 12 ? 'am' : 'pm';
+    const time  = `${h}:${m}${ap}`;
+    // Section badge — colored pill showing §N and server name at log time
+    let secBadge = '';
+    if(entry.sec != null){
+      const c    = FLOOR_C[entry.sec] || {bg:'#888', tx:'#fff'};
+      const name = st.names[entry.sec] || `Srv ${entry.sec}`;
+      secBadge = `<div class="log-sec-badge" style="background:${c.bg};color:${c.tx};" title="Section ${entry.sec} — ${name}">§${entry.sec} ${name}</div>`;
+    }
+    html += `<div class="log-entry">
+      <div class="log-pill" style="background:${def.color}22;color:${def.color};border:1px solid ${def.color}55;">${def.label}</div>
+      ${secBadge}
+      <div class="log-msg">${entry.msg}</div>
+      <div class="log-time">${time}</div>
+    </div>`;
+  }
+  content.innerHTML = html;
+}
+
+document.getElementById('log-close').addEventListener('pointerup', closeActivityLog);
+document.querySelectorAll('.log-filter').forEach(btn=>{
+  btn.addEventListener('pointerup', ()=>{
+    _logFilter = btn.dataset.filter;
+    document.querySelectorAll('.log-filter').forEach(b=>
+      b.classList.toggle('active', b===btn));
+    renderActivityLog();
+  });
+});
+
 // Option: Server Reports
 document.getElementById('mgr-opt-reports').addEventListener('pointerup', ()=>{
   closeManagerMenu();
@@ -2697,6 +2829,70 @@ function renderEditNamesList(){
     nameEl.textContent = name;
     nameEl.style.cssText = 'flex:1;font-size:14px;font-weight:600;color:var(--text);font-family:\'IBM Plex Sans\',sans-serif;';
 
+    // ── Edit button — turns the row into an inline text field
+    const editBtn = document.createElement('button');
+    editBtn.textContent = '✎';
+    editBtn.title = 'Rename';
+    editBtn.style.cssText = 'width:32px;height:32px;border-radius:7px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.55);font-size:14px;cursor:pointer;touch-action:manipulation;padding:0;flex-shrink:0;';
+    editBtn.addEventListener('pointerup', ()=>{
+      // Replace nameEl with an input field
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = name;
+      input.maxLength = 20;
+      input.style.cssText = 'flex:1;font-size:14px;font-weight:600;color:var(--text);font-family:\'IBM Plex Sans\',sans-serif;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.25);border-radius:6px;padding:4px 8px;outline:none;';
+      row.replaceChild(input, nameEl);
+      input.focus();
+      input.select();
+      editBtn.style.display = 'none';
+
+      const saveRename = () => {
+        const newName = input.value.trim();
+        if(!newName || newName === name){
+          // No change — restore
+          row.replaceChild(nameEl, input);
+          editBtn.style.display = '';
+          return;
+        }
+        if(SERVER_NAME_LIST.includes(newName)){
+          // Duplicate — flash red and restore
+          input.style.borderColor = 'rgba(255,80,80,0.8)';
+          setTimeout(()=>{ row.replaceChild(nameEl, input); editBtn.style.display = ''; }, 1200);
+          return;
+        }
+        // Commit rename
+        const idx = SERVER_NAME_LIST.indexOf(name);
+        if(idx !== -1) SERVER_NAME_LIST[idx] = newName;
+        // Rename history key
+        const oldKey = sanitizeHistoryKey(name);
+        const newKey = sanitizeHistoryKey(newName);
+        if(st.history[oldKey]){
+          st.history[newKey] = st.history[oldKey];
+          delete st.history[oldKey];
+        }
+        // Rename in active server slots
+        for(let s = 1; s <= st.servers; s++){
+          if(st.names[s] === name) st.names[s] = newName;
+        }
+        // Rename in shiftRecord
+        if(st.shiftRecord[name]){
+          st.shiftRecord[newName] = st.shiftRecord[name];
+          delete st.shiftRecord[name];
+        }
+        saveNameList();
+        snapshotState();
+        commitImmediate();
+        renderEditNamesList();
+        renderAll();
+      };
+
+      input.addEventListener('keydown', e=>{
+        if(e.key === 'Enter')  saveRename();
+        if(e.key === 'Escape'){ row.replaceChild(nameEl, input); editBtn.style.display = ''; }
+      });
+      input.addEventListener('blur', saveRename);
+    });
+
     const removeBtn = document.createElement('button');
     removeBtn.textContent = '✕';
     removeBtn.style.cssText = 'width:32px;height:32px;border-radius:7px;border:1px solid rgba(255,80,80,0.3);background:rgba(255,80,80,0.07);color:rgba(255,100,100,0.8);font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;padding:0;flex-shrink:0;';
@@ -2714,6 +2910,7 @@ function renderEditNamesList(){
     });
 
     row.appendChild(nameEl);
+    row.appendChild(editBtn);
     row.appendChild(removeBtn);
     list.appendChild(row);
   });
@@ -2833,14 +3030,21 @@ document.getElementById('adjust-counts-done').addEventListener('pointerup', ()=>
 document.getElementById('mgr-opt-clear').addEventListener('pointerup', ()=>{
   closeManagerMenu();
   showConfirm('Clear ALL data and start a new day?', ()=>{
-    // Snapshot current shift to history before wiping (fire-and-forget)
+    // 1. Commit current shift into persistent history (writes to st.history / st.sectionHistory)
     pushShiftToHistory();
     pushSectionToHistory();
+    // 2. Push to Firebase RIGHT NOW, before resetting anything.
+    //    This guarantees the history survives even if the user closes the app
+    //    before the name-picker flow completes and renderAll() fires.
+    snapshotState();
+    commitImmediate();
+    // 3. Now reset the daily shift data (history fields are intentionally kept)
     st.tables={}; st.events={}; st.movedPos={}; st.links={}; st.guestTotals={};
     st.dailyTables=0; st.dailyGuests=0; st.newServers=new Set(); st.onBreak=new Set();
     st.breakType={}; st.cutServers=new Set(); st.cutHistory=[];
     st.shiftRecord={}; // reset for the new day
     st.sectionRecord={};
+    st.activityLog=[];
     st.selectedSec=null; st.mGroup=null;
     st.servers = 2;
     st.names = {1:'Server 1',2:'Server 2',3:'Server 3',4:'Server 4',5:'Server 5',
@@ -2993,6 +3197,9 @@ function commitImmediate(){
     screen.style.display = 'none';
     sessionStorage.setItem(SESSION_KEY, '1');
     input.value = '';
+    // Close the guide if it was opened from the login screen
+    document.getElementById('guide-overlay').classList.remove('open');
+    document.getElementById('guide-overlay').scrollTop = 0;
   }
 
   function tryLogin(){
@@ -3081,6 +3288,8 @@ renderAll(); // seeds undo stack via snapshotState inside renderAll
       // Close reports modal if stuck open
       const rptModal = document.getElementById('reports-modal');
       if(rptModal) rptModal.style.display = 'none';
+      const logModal = document.getElementById('activity-log-modal');
+      if(logModal) logModal.style.display = 'none';
       // Close edit-names modal if stuck open
       const editNamesModal = document.getElementById('edit-names-modal');
       if(editNamesModal) editNamesModal.style.display = 'none';
@@ -3158,15 +3367,21 @@ let _fbPushPendingTs = 0;
 
 
 const FB_URL      = 'https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app/shift';
-const HISTORY_URL         = 'https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app/history';
-const SECTION_HISTORY_URL = 'https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app/section-history';
+// History is stored in st.history / st.sectionHistory and synced via the main /shift path.
 
 // ── SHIFT RECORD HELPERS (current-shift accumulation by server name)
 
 function recordShiftGuests(name, guests){
   if(!name || !(guests > 0)) return;
-  if(!st.shiftRecord[name]) st.shiftRecord[name] = {guests:0, turns:[]};
+  if(!st.shiftRecord[name]) st.shiftRecord[name] = {guests:0, skipGuests:0, turns:[]};
   st.shiftRecord[name].guests = (st.shiftRecord[name].guests||0) + guests;
+}
+
+// Rotation-mode credits (Next Up banner tap) — kept separate from real seatings
+function recordShiftSkips(name, guests){
+  if(!name || !(guests > 0)) return;
+  if(!st.shiftRecord[name]) st.shiftRecord[name] = {guests:0, skipGuests:0, turns:[]};
+  st.shiftRecord[name].skipGuests = (st.shiftRecord[name].skipGuests||0) + guests;
 }
 
 function recordShiftTurn(name, seatedAt){
@@ -3195,7 +3410,23 @@ function recordSectionTurn(secNum, seatedAt){
   st.sectionRecord[k].turns.push(minutes);
 }
 
-// ── FIREBASE HISTORY FUNCTIONS
+// ── ACTIVITY LOG
+const LOG_MAX = 500;
+const LOG_TYPES = {
+  SEAT:     {label:'Seated',    color:'#4CAF7A'},
+  UPDATE:   {label:'Updated',   color:'#7dd8f8'},
+  CLEAR:    {label:'Cleared',   color:'#ff8080'},
+  TRANSFER: {label:'Transfer',  color:'#ffc800'},
+  CUT:      {label:'Cut',       color:'#ff8080'},
+  ADD_SRV:  {label:'Added',     color:'#4CAF7A'},
+  BREAK_ON: {label:'Break',     color:'#aaa'},
+  BREAK_OFF:{label:'Returned',  color:'#aaa'},
+};
+function logActivity(type, msg, sec){
+  if(!st.activityLog) st.activityLog = [];
+  st.activityLog.unshift({ts: Date.now(), type, msg, sec: sec ?? null});
+  if(st.activityLog.length > LOG_MAX) st.activityLog.length = LOG_MAX;
+}
 
 // Firebase keys can't contain . # $ / [ ] — replace with _
 function sanitizeHistoryKey(name){
@@ -3204,49 +3435,38 @@ function sanitizeHistoryKey(name){
 
 // Snapshot the current shift's shiftRecord to Firebase history.
 // Called just before Clear All wipes the state.
-async function pushShiftToHistory(){
+// ── SHIFT HISTORY  — stored in st.history / st.sectionHistory (synced via /shift)
+// No separate Firebase path needed; history rides along with the normal state sync.
+
+function pushShiftToHistory(){
   const rec = st.shiftRecord || {};
   if(!Object.keys(rec).length) return;
   const shiftId = 's_' + Date.now();
   const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-  const pushes = [];
   for(const [name, data] of Object.entries(rec)){
     if(!(data.guests > 0) && !(data.turns && data.turns.length)) continue;
     const turns = Array.isArray(data.turns) ? data.turns : [];
     const avg = turns.length ? Math.round(turns.reduce((a,b)=>a+b,0)/turns.length) : null;
     const record = {
-      date:   today,
-      guests: data.guests||0,
-      tables: turns.length,
-      avgTurn: avg,
-      minTurn: turns.length ? Math.min(...turns) : null,
-      maxTurn: turns.length ? Math.max(...turns) : null
+      date:       today,
+      guests:     data.guests||0,
+      skipGuests: data.skipGuests||0,
+      tables:     turns.length,
+      avgTurn:    avg,
+      minTurn:    turns.length ? Math.min(...turns) : null,
+      maxTurn:    turns.length ? Math.max(...turns) : null
     };
     const key = sanitizeHistoryKey(name);
-    pushes.push(
-      fetch(`${HISTORY_URL}/${key}/${shiftId}.json`, {
-        method:'PUT', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(record)
-      }).catch(()=>{})
-    );
+    if(!st.history[key]) st.history[key] = {};
+    st.history[key][shiftId] = record;
   }
-  await Promise.allSettled(pushes);
 }
 
-async function fetchHistory(){
-  try{
-    const res = await fetch(`${HISTORY_URL}.json`);
-    if(!res.ok) return {};
-    return (await res.json()) || {};
-  }catch(e){ return {}; }
-}
-
-async function pushSectionToHistory(){
+function pushSectionToHistory(){
   const rec = st.sectionRecord || {};
   if(!Object.keys(rec).length) return;
   const shiftId = 's_' + Date.now();
   const today = new Date().toLocaleDateString('en-CA');
-  const pushes = [];
   for(const [secNum, data] of Object.entries(rec)){
     if(!(data.guests > 0) && !(data.turns && data.turns.length)) continue;
     const turns = Array.isArray(data.turns) ? data.turns : [];
@@ -3257,28 +3477,21 @@ async function pushSectionToHistory(){
       minTurn: turns.length ? Math.min(...turns) : null,
       maxTurn: turns.length ? Math.max(...turns) : null
     };
-    pushes.push(
-      fetch(`${SECTION_HISTORY_URL}/sec_${secNum}/${shiftId}.json`, {
-        method:'PUT', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(record)
-      }).catch(()=>{})
-    );
+    const key = `sec_${secNum}`;
+    if(!st.sectionHistory[key]) st.sectionHistory[key] = {};
+    st.sectionHistory[key][shiftId] = record;
   }
-  await Promise.allSettled(pushes);
 }
 
-async function fetchSectionHistory(){
-  try{
-    const res = await fetch(`${SECTION_HISTORY_URL}.json`);
-    if(!res.ok) return {};
-    return (await res.json()) || {};
-  }catch(e){ return {}; }
-}
+// Synchronous reads from state (history is already in st)
+function fetchHistory(){ return st.history || {}; }
+function fetchSectionHistory(){ return st.sectionHistory || {}; }
 
 async function deleteServerHistory(name){
-  try{
-    await fetch(`${HISTORY_URL}/${sanitizeHistoryKey(name)}.json`, {method:'DELETE'});
-  }catch(e){}
+  const key = sanitizeHistoryKey(name);
+  delete st.history[key];
+  snapshotState();
+  commitImmediate();
 }
 
 // ── REPORTS UI
@@ -3289,13 +3502,11 @@ let _reportsPeriod       = 'all';
 let _reportsServer       = null;
 let _historyMode         = 'server'; // 'server' | 'section'
 
-async function openReports(){
+function openReports(){
   _reportsServer = null;
   _reportsPeriod = 'all';
   const modal = document.getElementById('reports-modal');
   modal.style.display = 'flex';
-  document.getElementById('reports-content').innerHTML =
-    '<p class="rpt-no-data">Loading history…</p>';
   document.querySelectorAll('.rpt-tab').forEach(t=>
     t.classList.toggle('active', t.dataset.period === _reportsPeriod));
   _syncCustomRow();
@@ -3306,11 +3517,9 @@ async function openReports(){
     b.style.borderColor = active ? 'rgba(255,200,0,.35)' : 'rgba(255,255,255,.1)';
     b.style.color = active ? '#ffc800' : 'var(--dim)';
   });
-  const [firebaseHistory, firebaseSectionHistory] = await Promise.all([
-    fetchHistory(), fetchSectionHistory()
-  ]);
-  _historyCache        = mergeCurrentShift(firebaseHistory);
-  _sectionHistoryCache = mergeCurrentSection(firebaseSectionHistory);
+  // fetchHistory / fetchSectionHistory are now synchronous state reads
+  _historyCache        = mergeCurrentShift(fetchHistory());
+  _sectionHistoryCache = mergeCurrentSection(fetchSectionHistory());
   if(_historyMode === 'section') renderSectionList();
   else renderReportsList();
 }
@@ -3322,19 +3531,20 @@ function mergeCurrentShift(history){
   const today = new Date().toLocaleDateString('en-CA');
   const liveKey = 's_live_' + today;
   for(const [name, data] of Object.entries(st.shiftRecord || {})){
-    if(!(data.guests > 0) && !(data.turns && data.turns.length)) continue;
+    if(!(data.guests > 0) && !(data.skipGuests > 0) && !(data.turns && data.turns.length)) continue;
     const turns = Array.isArray(data.turns) ? data.turns : [];
     const avg = turns.length ? Math.round(turns.reduce((a,b)=>a+b,0)/turns.length) : null;
     const key = sanitizeHistoryKey(name);
     if(!merged[key]) merged[key] = {};
     merged[key][liveKey] = {
-      date:    today,
-      guests:  data.guests || 0,
-      tables:  turns.length,
-      avgTurn: avg,
-      minTurn: turns.length ? Math.min(...turns) : null,
-      maxTurn: turns.length ? Math.max(...turns) : null,
-      live:    true  // flag so we can label it "In Progress" in the UI
+      date:       today,
+      guests:     data.guests || 0,
+      skipGuests: data.skipGuests || 0,
+      tables:     turns.length,
+      avgTurn:    avg,
+      minTurn:    turns.length ? Math.min(...turns) : null,
+      maxTurn:    turns.length ? Math.max(...turns) : null,
+      live:       true  // flag so we can label it "In Progress" in the UI
     };
   }
   return merged;
@@ -3396,13 +3606,14 @@ function isLiveShift(id){ return id.startsWith('s_live_'); }
 
 function aggregateForServer(serverShifts, period){
   const {from, to} = getFilterRange(period);
-  let guests=0, tables=0, turnTotal=0, turnCount=0;
+  let guests=0, skipGuests=0, tables=0, turnTotal=0, turnCount=0;
   const shiftList = [];
   for(const [id, s] of Object.entries(serverShifts||{})){
     const ts = getShiftTs(id);
     if(isNaN(ts) || ts < from || ts > to) continue;
-    guests  += s.guests||0;
-    tables  += s.tables||0;
+    guests     += s.guests||0;
+    skipGuests += s.skipGuests||0;
+    tables     += s.tables||0;
     if(s.avgTurn != null && s.tables > 0){
       turnTotal += s.avgTurn * s.tables;
       turnCount += s.tables;
@@ -3411,7 +3622,7 @@ function aggregateForServer(serverShifts, period){
   }
   shiftList.sort((a,b)=>b.ts-a.ts);
   const avgTurn = turnCount > 0 ? Math.round(turnTotal/turnCount) : null;
-  return {guests, tables, avgTurn, shiftList};
+  return {guests, skipGuests, tables, avgTurn, shiftList};
 }
 
 function renderReportsList(){
@@ -3456,11 +3667,14 @@ function renderReportsList(){
     const bgDark = darkenHex(col.bg, 0.55);
     const initial = r.name.charAt(0).toUpperCase();
     const turnStr = r.avgTurn != null ? `${r.avgTurn}m avg` : '—';
+    const guestStr = r.skipGuests > 0
+      ? `${r.guests} seated <span style="color:var(--dim);font-size:10px;">+${r.skipGuests} rotation</span>`
+      : `${r.guests} guests`;
     html += `<div class="rpt-server-row" data-name="${r.name}">
       <div class="rpt-srv-badge" style="background:${bgDark};color:${col.bg};">${initial}</div>
       <div class="rpt-srv-name">${r.name}</div>
       <div class="rpt-srv-stats">
-        <div class="rpt-stat-main">${r.guests} guests</div>
+        <div class="rpt-stat-main">${guestStr}</div>
         <div class="rpt-stat-sub">${r.tables} tables · ${turnStr}</div>
       </div>
       <div style="color:var(--dim);font-size:18px;padding-left:4px;flex-shrink:0;">›</div>
@@ -3491,13 +3705,18 @@ function renderReportDetail(name){
 
   const fmt = v => v != null ? `${v}m` : '—';
 
-  const summaryBlock = (label, agg) => `
+  const summaryBlock = (label, agg) => {
+    const guestVal = agg.skipGuests > 0
+      ? `${agg.guests}<span style="font-size:11px;color:var(--dim);font-weight:400;"> +${agg.skipGuests}</span>`
+      : `${agg.guests}`;
+    const guestLbl = agg.skipGuests > 0 ? 'SEATED +ROT' : 'GUESTS';
+    return `
     <div class="rpt-period-label">${label}</div>
     <div class="rpt-summary-grid">
-      <div class="rpt-summary-card"><div class="rpt-summary-val">${agg.guests}</div><div class="rpt-summary-lbl">GUESTS</div></div>
+      <div class="rpt-summary-card"><div class="rpt-summary-val">${guestVal}</div><div class="rpt-summary-lbl">${guestLbl}</div></div>
       <div class="rpt-summary-card"><div class="rpt-summary-val">${agg.tables}</div><div class="rpt-summary-lbl">TABLES</div></div>
       <div class="rpt-summary-card"><div class="rpt-summary-val">${fmt(agg.avgTurn)}</div><div class="rpt-summary-lbl">AVG TURN</div></div>
-    </div>`;
+    </div>`; };
 
   const customFrom = (document.getElementById('rpt-from')||{}).value || '';
   const customTo   = (document.getElementById('rpt-to')||{}).value   || '';
@@ -3518,9 +3737,13 @@ function renderReportDetail(name){
       const dateStr = isLive
         ? '<span style="color:#ffc800;font-size:10px;">● IN PROGRESS</span>'
         : new Date(s.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',weekday:'short'});
+      const skip = s.skipGuests||0;
+      const guestCell = skip > 0
+        ? `${s.guests}<span style="font-size:9px;color:var(--dim);"> +${skip}r</span>`
+        : `${s.guests}`;
       shiftRows += `<div class="rpt-shift-row">
         <div>${dateStr}</div>
-        <div style="text-align:right;">${s.guests}</div>
+        <div style="text-align:right;">${guestCell}</div>
         <div style="text-align:right;">${s.tables}</div>
         <div style="text-align:right;">${fmt(s.avgTurn)}</div>
       </div>`;
