@@ -637,6 +637,7 @@ const st = {
   sectionRecord:{},        // {secNum:{guests,turns[]}} — current-shift section accumulator
   history:{},              // {sanitizedName:{shiftId:{date,guests,tables,avgTurn,...}}} — all-time
   sectionHistory:{},       // {sec_N:{shiftId:{...}}} — all-time section history
+  lastAutoClearDate: '',   // 'YYYY-MM-DD' of last auto-clear so we only run once per day
   activityLog:[],          // [{ts,type,msg}] — timestamped event log
   selectedSec: null,
   rotMode: false,
@@ -648,6 +649,7 @@ const st = {
 let _fbSyncing = false;
 let _fbPushTimer = null;
 let _fbReady = false;
+let _autoClearCheckedOnLoad = false; // ensures checkAutoClear only fires once on first load
 let pushToFirebase = () => {};
 
 
@@ -674,6 +676,7 @@ function stateToObj(){
     sectionRecord: st.sectionRecord,
     history:       st.history,
     sectionHistory:st.sectionHistory,
+    lastAutoClearDate: st.lastAutoClearDate || '',
     activityLog:   st.activityLog,
     selectedSec: st.selectedSec ?? null,
     nameList:    SERVER_NAME_LIST
@@ -753,6 +756,7 @@ function deserializeState(data, restoreStacks = true){
   st.sectionRecord = data.sectionRecord ?? {};
   st.history       = data.history       ?? {};
   st.sectionHistory= data.sectionHistory?? {};
+  st.lastAutoClearDate = data.lastAutoClearDate || '';
   st.activityLog   = data.activityLog   ?? [];
   st.selectedSec = data.selectedSec ?? null;
   if(data.nameList && Array.isArray(data.nameList) && data.nameList.length > 0){
@@ -3027,33 +3031,58 @@ document.getElementById('adjust-counts-done').addEventListener('pointerup', ()=>
 });
 
 
+// ── NEW DAY LOGIC (shared by manual clear and auto-clear at 2am)
+function executeNewDay(silent){
+  // 1. Commit current shift into persistent history
+  pushShiftToHistory();
+  pushSectionToHistory();
+  // 2. Mark today as cleared so auto-clear doesn't fire again
+  st.lastAutoClearDate = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+  // 3. Push to Firebase immediately — history and the new date are now in state
+  snapshotState();
+  commitImmediate();
+  // 4. Reset daily shift data (history fields and lastAutoClearDate are kept)
+  st.tables={}; st.events={}; st.movedPos={}; st.links={}; st.guestTotals={};
+  st.dailyTables=0; st.dailyGuests=0; st.newServers=new Set(); st.onBreak=new Set();
+  st.breakType={}; st.cutServers=new Set(); st.cutHistory=[];
+  st.shiftRecord={}; st.sectionRecord={};
+  st.activityLog=[];
+  st.selectedSec=null; st.mGroup=null;
+  st.servers = 2;
+  st.names = {1:'Server 1',2:'Server 2',3:'Server 3',4:'Server 4',5:'Server 5',
+    6:'Server 6',7:'Server 7',8:'Server 8',9:'Server 9',10:'Server 10',11:'Server 11'};
+  document.getElementById('srv-count').textContent = 2;
+  localStorage.removeItem(LS_KEY);
+  closeModal();
+  if(!silent){
+    // Manual clear: ask for names interactively
+    pickNamesSequentially(1, 2, ()=>{ renderAll(); });
+  } else {
+    // Auto-clear: just render with placeholder names — staff enter names when they arrive
+    renderAll();
+    logActivity('AUTO', 'Auto-cleared at 2am — new day started');
+  }
+}
+
+// ── AUTO-CLEAR AT 2AM
+// Checks every minute (and on startup) whether a new-day clear is due.
+// "Due" = current time is 02:00–07:59 AND we haven't already cleared today.
+function checkAutoClear(){
+  const now    = new Date();
+  const hour   = now.getHours();
+  const today  = now.toLocaleDateString('en-CA'); // YYYY-MM-DD
+  // Window: 2am–8am  (so a brief app-open at 4am still triggers it)
+  if(hour >= 2 && hour < 8 && st.lastAutoClearDate !== today){
+    console.log('[AutoClear] Triggering new-day clear at', now.toTimeString());
+    executeNewDay(true);
+  }
+}
+// Run once every minute (startup call is in dbToState after first Firebase load)
+setInterval(checkAutoClear, 60 * 1000);
+
 document.getElementById('mgr-opt-clear').addEventListener('pointerup', ()=>{
   closeManagerMenu();
-  showConfirm('Clear ALL data and start a new day?', ()=>{
-    // 1. Commit current shift into persistent history (writes to st.history / st.sectionHistory)
-    pushShiftToHistory();
-    pushSectionToHistory();
-    // 2. Push to Firebase RIGHT NOW, before resetting anything.
-    //    This guarantees the history survives even if the user closes the app
-    //    before the name-picker flow completes and renderAll() fires.
-    snapshotState();
-    commitImmediate();
-    // 3. Now reset the daily shift data (history fields are intentionally kept)
-    st.tables={}; st.events={}; st.movedPos={}; st.links={}; st.guestTotals={};
-    st.dailyTables=0; st.dailyGuests=0; st.newServers=new Set(); st.onBreak=new Set();
-    st.breakType={}; st.cutServers=new Set(); st.cutHistory=[];
-    st.shiftRecord={}; // reset for the new day
-    st.sectionRecord={};
-    st.activityLog=[];
-    st.selectedSec=null; st.mGroup=null;
-    st.servers = 2;
-    st.names = {1:'Server 1',2:'Server 2',3:'Server 3',4:'Server 4',5:'Server 5',
-      6:'Server 6',7:'Server 7',8:'Server 8',9:'Server 9',10:'Server 10',11:'Server 11'};
-    document.getElementById('srv-count').textContent = 2;
-    localStorage.removeItem(LS_KEY);
-    closeModal();
-    pickNamesSequentially(1, 2, ()=>{ renderAll(); });
-  });
+  showConfirm('Clear ALL data and start a new day?', ()=>{ executeNewDay(false); });
 });
 
 // Option 2: Reset guest counts only
@@ -3974,6 +4003,9 @@ function dbToState(data){
     } else {
       renderOnly();
     }
+    // On the very first successful Firebase load, check whether a 2am auto-clear
+    // is due (catches cases where the iPad was asleep through 2am).
+    if(!_autoClearCheckedOnLoad){ _autoClearCheckedOnLoad = true; checkAutoClear(); }
   } catch(e){
     _fbSyncing = false;
     console.error('[FB] dbToState error:', e);
