@@ -3033,15 +3033,14 @@ document.getElementById('adjust-counts-done').addEventListener('pointerup', ()=>
 
 // ── NEW DAY LOGIC (shared by manual clear and auto-clear at 2am)
 function executeNewDay(silent){
-  // 1. Commit current shift into persistent history
+  // 1. Commit current shift into persistent history (writes into st.history / st.sectionHistory)
   pushShiftToHistory();
   pushSectionToHistory();
-  // 2. Mark today as cleared so auto-clear doesn't fire again
-  st.lastAutoClearDate = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-  // 3. Push to Firebase immediately — history and the new date are now in state
-  snapshotState();
-  commitImmediate();
-  // 4. Reset daily shift data (history fields and lastAutoClearDate are kept)
+
+  // 2. Reset all daily shift data.
+  //    History fields (st.history, st.sectionHistory) and lastAutoClearDate are
+  //    intentionally kept — they survive the reset and ride into Firebase with the
+  //    clean state in step 3.
   st.tables={}; st.events={}; st.movedPos={}; st.links={}; st.guestTotals={};
   st.dailyTables=0; st.dailyGuests=0; st.newServers=new Set(); st.onBreak=new Set();
   st.breakType={}; st.cutServers=new Set(); st.cutHistory=[];
@@ -3051,14 +3050,22 @@ function executeNewDay(silent){
   st.servers = 2;
   st.names = {1:'Server 1',2:'Server 2',3:'Server 3',4:'Server 4',5:'Server 5',
     6:'Server 6',7:'Server 7',8:'Server 8',9:'Server 9',10:'Server 10',11:'Server 11'};
+  st.lastAutoClearDate = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
   document.getElementById('srv-count').textContent = 2;
   localStorage.removeItem(LS_KEY);
+
+  // 3. Push the clean reset state (with history embedded) to Firebase immediately.
+  //    This is done AFTER the reset so Firebase only ever sees the clean state —
+  //    no intermediate pre-reset push that a stale poll could echo back.
   closeModal();
+  snapshotState();
+  commitImmediate();
+
   if(!silent){
-    // Manual clear: ask for names interactively
+    // Manual clear: ask for server names interactively
     pickNamesSequentially(1, 2, ()=>{ renderAll(); });
   } else {
-    // Auto-clear: just render with placeholder names — staff enter names when they arrive
+    // Auto-clear at 2am: render blank floor; staff enter names when they arrive
     renderAll();
     logActivity('AUTO', 'Auto-cleared at 2am — new day started');
   }
