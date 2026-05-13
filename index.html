@@ -649,7 +649,6 @@ const st = {
 let _fbSyncing = false;
 let _fbPushTimer = null;
 let _fbReady = false;
-let _autoClearCheckedOnLoad = false; // ensures checkAutoClear only fires once on first load
 let pushToFirebase = () => {};
 
 
@@ -3072,22 +3071,6 @@ function executeNewDay(silent){
   }
 }
 
-// ── AUTO-CLEAR AT 2AM
-// Checks every minute (and on startup) whether a new-day clear is due.
-// "Due" = current time is 02:00–07:59 AND we haven't already cleared today.
-function checkAutoClear(){
-  const now    = new Date();
-  const hour   = now.getHours();
-  const today  = now.toLocaleDateString('en-CA'); // YYYY-MM-DD
-  // Window: 2am–8am  (so a brief app-open at 4am still triggers it)
-  if(hour >= 2 && hour < 8 && st.lastAutoClearDate !== today){
-    console.log('[AutoClear] Triggering new-day clear at', now.toTimeString());
-    executeNewDay(true);
-  }
-}
-// Run once every minute (startup call is in dbToState after first Firebase load)
-setInterval(checkAutoClear, 60 * 1000);
-
 document.getElementById('mgr-opt-clear').addEventListener('pointerup', ()=>{
   closeManagerMenu();
   // Small delay lets iOS fully settle the current touch gesture before opening
@@ -4022,7 +4005,6 @@ function dbToState(data){
     }
     // On the very first successful Firebase load, check whether a 2am auto-clear
     // is due (catches cases where the iPad was asleep through 2am).
-    if(!_autoClearCheckedOnLoad){ _autoClearCheckedOnLoad = true; checkAutoClear(); }
   } catch(e){
     _fbSyncing = false;
     console.error('[FB] dbToState error:', e);
@@ -4059,6 +4041,7 @@ pushToFirebase = function(){
       if(r.ok){
         _lastPollData  = body;        // server is now at `body`
         _localDirty    = false;       // our push landed, local is clean
+        _pushCooldown  = Date.now() + 3000; // ignore stale poll echoes for 3s
         setSyncDot(true);
       } else {
         setSyncDot(false);
@@ -4075,6 +4058,7 @@ pushToFirebase = function(){
   }, delay);
 };
 let _fbPushPending = false;
+let _pushCooldown  = 0; // timestamp until which poll won't apply data (post-push echo window)
 
 // Sync indicator dot
 const syncDot = document.createElement('div');
@@ -4089,6 +4073,7 @@ function setSyncDot(ok){
 let _lastPollData = null;
 let _pollBackoff  = 2000;
 let _pollFailures = 0;
+let _lastAutoClearCheck = 0; // timestamp of last 2am auto-clear check
 
 function _nextPollDelay(){
   if(document.hidden) return 10000;
@@ -4112,7 +4097,7 @@ async function poll(){
         //   4. Local has unpushed changes (_localDirty) — e.g. push failed earlier
         //      CRITICAL: without this check, a silently-failed push leaves us in a
         //      loop where every poll overwrites our edits with the server's old data.
-        if(!_fbSyncing && !_fbPushPending && !_fbPushTimer && !_localDirty){
+        if(!_fbSyncing && !_fbPushPending && !_fbPushTimer && !_localDirty && Date.now() > _pushCooldown){
           _lastPollData = asStr;
           dbToState(data);
         } else if(_localDirty && !_fbPushPending && !_fbPushTimer){
@@ -4122,6 +4107,21 @@ async function poll(){
         }
       }
       _fbReady = true;
+      // ── AUTO-CLEAR AT 2AM ─────────────────────────────────────────────────
+      // Run at most once per minute, only after state is loaded, and never
+      // while a sync or push is in flight. This avoids the interference that
+      // caused issues when the check ran inside dbToState.
+      if((Date.now() - _lastAutoClearCheck) > 60000
+          && !_fbSyncing && !_fbPushPending && !_fbPushTimer && !_localDirty){
+        _lastAutoClearCheck = Date.now();
+        const _h = new Date().getHours();
+        const _today = new Date().toLocaleDateString('en-CA');
+        if(_h >= 2 && _h < 8 && st.lastAutoClearDate !== _today){
+          console.log('[AutoClear] Running 2am clear');
+          executeNewDay(true);
+        }
+      }
+      // ──────────────────────────────────────────────────────────────────────
     } else {
       setSyncDot(false);
       _pollFailures++;
