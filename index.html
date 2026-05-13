@@ -3062,8 +3062,9 @@ function executeNewDay(silent){
   commitImmediate();
 
   if(!silent){
-    // Manual clear: ask for server names interactively
-    pickNamesSequentially(1, 2, ()=>{ renderAll(); });
+    // Small delay before name picker — prevents phantom iOS touch from the "Confirm"
+    // tap bleeding into the name picker and immediately hitting Cancel.
+    setTimeout(() => pickNamesSequentially(1, 2, ()=>{ renderAll(); }), 120);
   } else {
     // Auto-clear at 2am: render blank floor; staff enter names when they arrive
     renderAll();
@@ -3089,29 +3090,38 @@ setInterval(checkAutoClear, 60 * 1000);
 
 document.getElementById('mgr-opt-clear').addEventListener('pointerup', ()=>{
   closeManagerMenu();
-  showConfirm('Clear ALL data and start a new day?', ()=>{ executeNewDay(false); });
+  // Small delay lets iOS fully settle the current touch gesture before opening
+  // the confirm overlay. Without this, iOS can misfire events on the newly
+  // appeared confirm buttons (showing nothing, or immediately phantom-cancelling).
+  setTimeout(() => {
+    showConfirm('Clear ALL data and start a new day?', ()=>{ executeNewDay(false); });
+  }, 80);
 });
 
 // Option 2: Reset guest counts only
 document.getElementById('mgr-opt-counts').addEventListener('pointerup', ()=>{
   closeManagerMenu();
-  showConfirm('Reset all guest counts to zero?', ()=>{
-    for(let i = 1; i <= st.servers; i++) st.guestTotals[i] = 0;
-    st.newServers = new Set();
-    st.selectedSec = null;
-    snapshotState();
-    renderAll();
-  });
+  setTimeout(() => {
+    showConfirm('Reset all guest counts to zero?', ()=>{
+      for(let i = 1; i <= st.servers; i++) st.guestTotals[i] = 0;
+      st.newServers = new Set();
+      st.selectedSec = null;
+      snapshotState();
+      renderAll();
+    });
+  }, 80);
 });
 
 // Option 3: Logout
 document.getElementById('mgr-opt-logout').addEventListener('pointerup', ()=>{
   closeManagerMenu();
-  showConfirm('Log out?', ()=>{
-    sessionStorage.removeItem('tt_auth_v1');
-    document.getElementById('login-screen').style.display = 'flex';
-    setTimeout(()=>document.getElementById('login-input').focus(), 300);
-  });
+  setTimeout(() => {
+    showConfirm('Log out?', ()=>{
+      sessionStorage.removeItem('tt_auth_v1');
+      document.getElementById('login-screen').style.display = 'flex';
+      setTimeout(()=>document.getElementById('login-input').focus(), 300);
+    });
+  }, 80);
 });
 document.getElementById('overlay').addEventListener('pointerup', e=>{
   if(e.target===document.getElementById('overlay')) closeModal();
