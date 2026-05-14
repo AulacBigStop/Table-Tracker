@@ -4039,14 +4039,16 @@ pushToFirebase = function(){
     })
     .then(r => {
       if(r.ok){
-        _lastPollData  = body;        // server is now at `body`
-        _localDirty    = false;       // our push landed, local is clean
-        _pushCooldown  = Date.now() + 3000; // ignore stale poll echoes for 3s
+        const changed = (body !== _lastPollData); // true only when we actually changed server state
+        _lastPollData  = body;
+        _localDirty    = false;
         setSyncDot(true);
+        // Block stale Firebase echoes for 3s after a real state change.
+        // NOT set on re-renders of identical state, so sync from other devices
+        // is only delayed when there's genuine new content to protect.
+        if(changed) _pushCooldown = Date.now() + 3000;
       } else {
         setSyncDot(false);
-        // Push failed — schedule a retry so we don't get stuck on the
-        // server's (possibly stale) version forever.
         setTimeout(()=>{ if(_localDirty) pushToFirebase(); }, 2000);
       }
     })
@@ -4058,7 +4060,7 @@ pushToFirebase = function(){
   }, delay);
 };
 let _fbPushPending = false;
-let _pushCooldown  = 0; // timestamp until which poll won't apply data (post-push echo window)
+let _pushCooldown  = 0; // blocks stale echo after a real push; only set when state actually changed
 
 // Sync indicator dot
 const syncDot = document.createElement('div');
