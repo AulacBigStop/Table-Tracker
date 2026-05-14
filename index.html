@@ -653,8 +653,9 @@ let pushToFirebase = () => {};
 
 
 // ── SHARED STATE SERIALIZER
-// stateToObj — compact serialization used for undo/redo snapshots.
-// Does NOT include the undo/redo stacks themselves (that would recurse).
+// stateToObj — compact serialization used for undo/redo snapshots and localStorage.
+// Does NOT include history/sectionHistory — those are large, append-only, and don't
+// need undo/redo. They live in their own localStorage key and Firebase path.
 function stateToObj(){
   return {
     servers:     st.servers,
@@ -673,12 +674,19 @@ function stateToObj(){
     endTimes:    st.endTimes,
     shiftRecord: st.shiftRecord,
     sectionRecord: st.sectionRecord,
-    history:       st.history,
-    sectionHistory:st.sectionHistory,
     lastAutoClearDate: st.lastAutoClearDate || '',
     activityLog:   st.activityLog,
     selectedSec: st.selectedSec ?? null,
     nameList:    SERVER_NAME_LIST
+  };
+}
+
+// historyToObj — shift/section history only. Kept separate so it never inflates
+// undo snapshots or gets serialized redundantly on every user interaction.
+function historyToObj(){
+  return {
+    history:        st.history        || {},
+    sectionHistory: st.sectionHistory || {}
   };
 }
 
@@ -688,6 +696,7 @@ function stateToObj(){
 function stateToFirebase(){
   return {
     ...stateToObj(),
+    ...historyToObj(),   // history lives alongside operational state in Firebase
     undoStack: UNDO_STACK,
     redoStack: REDO_STACK
   };
@@ -753,9 +762,11 @@ function deserializeState(data, restoreStacks = true){
   st.endTimes    = data.endTimes   ?? {};
   st.shiftRecord   = data.shiftRecord   ?? {};
   st.sectionRecord = data.sectionRecord ?? {};
-  st.history       = data.history       ?? {};
-  st.sectionHistory= data.sectionHistory?? {};
-  st.lastAutoClearDate = data.lastAutoClearDate || '';
+  // History is NOT in undo snapshots — keep current st.history unless incoming
+  // data explicitly provides it (i.e. from a full Firebase sync).
+  if(data.history        && Object.keys(data.history).length)        st.history        = data.history;
+  if(data.sectionHistory && Object.keys(data.sectionHistory).length) st.sectionHistory = data.sectionHistory;
+  st.lastAutoClearDate = data.lastAutoClearDate || st.lastAutoClearDate || '';
   st.activityLog   = data.activityLog   ?? [];
   st.selectedSec = data.selectedSec ?? null;
   if(data.nameList && Array.isArray(data.nameList) && data.nameList.length > 0){
@@ -778,7 +789,8 @@ function deserializeState(data, restoreStacks = true){
   updateUndoBtn();
 }
 // ── LOCAL PERSISTENCE KEY
-const LS_KEY = 'tt_shift_v1';
+const LS_KEY         = 'tt_shift_v1';
+const LS_HISTORY_KEY = 'tt_history_v1'; // separate key — keeps history out of undo snapshots
 
 // ── HELPERS
 function secOf(tid){
@@ -3052,13 +3064,15 @@ function executeNewDay(silent){
   st.lastAutoClearDate = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
   document.getElementById('srv-count').textContent = 2;
   localStorage.removeItem(LS_KEY);
+  localStorage.removeItem(LS_HISTORY_KEY);
 
   // 3. Push the clean reset state (with history embedded) to Firebase immediately.
-  //    This is done AFTER the reset so Firebase only ever sees the clean state —
-  //    no intermediate pre-reset push that a stale poll could echo back.
   closeModal();
   snapshotState();
   commitImmediate();
+  // Also persist history to its own localStorage key immediately — don't wait for
+  // the debounced saveLocal, since the user could close the app right after this.
+  try{ localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(historyToObj())); } catch(e){}
 
   if(!silent){
     // Small delay before name picker — prevents phantom iOS touch from the "Confirm"
@@ -3258,18 +3272,27 @@ function saveLocal(){
   if(_saveLocalTimer) return; // coalesce calls within the same debounce window
   _saveLocalTimer = setTimeout(()=>{
     _saveLocalTimer = null;
-    try{
-      localStorage.setItem(LS_KEY, JSON.stringify(stateToObj()));
-    } catch(e){}
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(stateToObj())); } catch(e){}
+    // History is large and rarely changes — save it separately so it never
+    // inflates the main state key that's read/written on every interaction.
+    try{ localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(historyToObj())); } catch(e){}
   }, 250);
 }
 
 function loadLocal(){
   try{
     const raw = localStorage.getItem(LS_KEY);
-    if(!raw) return;
-    const data = JSON.parse(raw);
-    deserializeState(data);
+    if(raw) deserializeState(JSON.parse(raw));
+  } catch(e){}
+  // Load history from its own key so it's available immediately on startup
+  // before Firebase syncs (avoids empty reports on first open).
+  try{
+    const rawH = localStorage.getItem(LS_HISTORY_KEY);
+    if(rawH){
+      const h = JSON.parse(rawH);
+      if(h.history)        st.history        = h.history;
+      if(h.sectionHistory) st.sectionHistory = h.sectionHistory;
+    }
   } catch(e){}
 }
 
