@@ -4015,7 +4015,6 @@ function dbToState(data){
 // Uses a "max wait" pattern: rapid successive calls still push at least every
 // 1.2s so we don't starve writes during sustained fast activity.
 let _fbPushFirstCall = 0;
-let _lastPushedBody  = null;  // The state we last attempted to push (may differ from _lastPollData)
 let _localDirty      = false; // Set when local state changes; cleared when successfully pushed
 
 pushToFirebase = function(){
@@ -4029,8 +4028,7 @@ pushToFirebase = function(){
   _fbPushTimer = setTimeout(()=>{
     _fbPushTimer = null;
     _fbPushFirstCall = 0;
-    const body = JSON.stringify(stateToFirebase()); // includes undo/redo stacks
-    _lastPushedBody = body;
+    const body = JSON.stringify(stateToFirebase());
     _fbPushPending = true;
     fetch(FB_URL + '.json', {
       method: 'PUT',
@@ -4039,14 +4037,15 @@ pushToFirebase = function(){
     })
     .then(r => {
       if(r.ok){
-        const changed = (body !== _lastPollData); // true only when we actually changed server state
-        _lastPollData  = body;
-        _localDirty    = false;
+        _localDirty = false;
         setSyncDot(true);
-        // Block stale Firebase echoes for 3s after a real state change.
-        // NOT set on re-renders of identical state, so sync from other devices
-        // is only delayed when there's genuine new content to protect.
-        if(changed) _pushCooldown = Date.now() + 3000;
+        // If an SSE event arrived while this push was in flight, apply it now.
+        // This ensures we don't miss a concurrent change from another device.
+        if(_pendingSSEData){
+          const d = _pendingSSEData;
+          _pendingSSEData = null;
+          if(!_fbSyncing) dbToState(d);
+        }
       } else {
         setSyncDot(false);
         setTimeout(()=>{ if(_localDirty) pushToFirebase(); }, 2000);
@@ -4060,7 +4059,6 @@ pushToFirebase = function(){
   }, delay);
 };
 let _fbPushPending = false;
-let _pushCooldown  = 0; // blocks stale echo after a real push; only set when state actually changed
 
 // Sync indicator dot
 const syncDot = document.createElement('div');
@@ -4071,75 +4069,106 @@ function setSyncDot(ok){
   syncDot.title = ok ? 'Synced' : 'Offline';
 }
 
-// Listen for changes by polling Firebase every 2 seconds (slower when hidden)
-let _lastPollData = null;
-let _pollBackoff  = 2000;
-let _pollFailures = 0;
-let _lastAutoClearCheck = 0; // timestamp of last 2am auto-clear check
+// ── FIREBASE SSE LISTENER ─────────────────────────────────────────────────────
+// Replace polling with Firebase's real-time streaming endpoint. Firebase pushes
+// changes to us instantly — no polling interval, no stale-echo race condition.
+//
+// Flow:
+//   PUT (push)  →  Firebase accepts write  →  SSE event arrives  →  dbToState
+//
+// If an SSE event arrives while a push is in flight, we buffer it and apply it
+// once the push settles, so we never lose a concurrent change from another device.
 
-function _nextPollDelay(){
-  if(document.hidden) return 10000;
-  if(_pollFailures > 0) return Math.min(2000 * (2 ** _pollFailures), 30000);
-  return _pollBackoff;
-}
+let _sseSource      = null;
+let _pendingSSEData = null; // buffered event received while a push was in flight
+let _sseReconnTimer = null;
 
-async function poll(){
-  try{
-    const res = await fetch(FB_URL + '.json');
-    if(res.ok){
-      const data = await res.json();
-      setSyncDot(true);
-      _pollFailures = 0;
-      const asStr = JSON.stringify(data);
-      if(asStr !== _lastPollData){
-        // Three reasons we should NOT apply server data to local state:
-        //   1. We're actively inside dbToState already (_fbSyncing)
-        //   2. A push is in flight (_fbPushPending) — server version is stale vs local
-        //   3. A push is queued (_fbPushTimer) — local has edits not yet sent
-        //   4. Local has unpushed changes (_localDirty) — e.g. push failed earlier
-        //      CRITICAL: without this check, a silently-failed push leaves us in a
-        //      loop where every poll overwrites our edits with the server's old data.
-        if(!_fbSyncing && !_fbPushPending && !_fbPushTimer && !_localDirty && Date.now() > _pushCooldown){
-          _lastPollData = asStr;
-          dbToState(data);
-        } else if(_localDirty && !_fbPushPending && !_fbPushTimer){
-          // We have unpushed changes but no push is scheduled — this can happen
-          // if a push failed and retry hasn't fired yet. Retry now.
-          pushToFirebase();
-        }
-      }
-      _fbReady = true;
-      // ── AUTO-CLEAR AT 2AM ─────────────────────────────────────────────────
-      // Run at most once per minute, only after state is loaded, and never
-      // while a sync or push is in flight. This avoids the interference that
-      // caused issues when the check ran inside dbToState.
-      if((Date.now() - _lastAutoClearCheck) > 60000
-          && !_fbSyncing && !_fbPushPending && !_fbPushTimer && !_localDirty){
-        _lastAutoClearCheck = Date.now();
-        const _h = new Date().getHours();
-        const _today = new Date().toLocaleDateString('en-CA');
-        if(_h >= 2 && _h < 8 && st.lastAutoClearDate !== _today){
-          console.log('[AutoClear] Running 2am clear');
-          executeNewDay(true);
-        }
-      }
-      // ──────────────────────────────────────────────────────────────────────
-    } else {
-      setSyncDot(false);
-      _pollFailures++;
-    }
-  } catch(e){
-    setSyncDot(false);
-    _pollFailures++;
+function _applySSE(data){
+  if(!data || _fbSyncing) return;
+  if(_fbPushPending || _fbPushTimer || _localDirty){
+    // Push in flight — store the latest server state and apply when push settles.
+    _pendingSSEData = data;
+    return;
   }
-  setTimeout(poll, _nextPollDelay());
+  _pendingSSEData = null;
+  dbToState(data);
+  setSyncDot(true);
+  _fbReady = true;
 }
-poll();
 
-// Resume fast polling immediately when app comes back to foreground
+function connectSSE(){
+  clearTimeout(_sseReconnTimer);
+  if(_sseSource){ try{ _sseSource.close(); }catch(_){} _sseSource = null; }
+
+  // EventSource connects to Firebase SSE endpoint. No special headers needed
+  // for public-rule databases; Firebase serves full state on first connect then
+  // streams deltas (put / patch events).
+  const src = new EventSource(FB_URL + '.json');
+  _sseSource = src;
+
+  src.addEventListener('put', e => {
+    try{
+      const msg = JSON.parse(e.data);
+      // path '/' = full state replace (initial connect or full write)
+      if(msg && msg.path === '/' && msg.data) _applySSE(msg.data);
+      // sub-path puts: refetch full state rather than merging partial
+      else if(msg && msg.path !== '/') _refetch();
+    } catch(err){ console.error('[SSE] put parse error', err); }
+  });
+
+  src.addEventListener('patch', e => {
+    // Patch = partial update — easiest to refetch rather than deep-merge
+    _refetch();
+  });
+
+  src.addEventListener('cancel', () => {
+    // Auth revoked or rules changed
+    setSyncDot(false);
+    src.close(); _sseSource = null;
+    _sseReconnTimer = setTimeout(connectSSE, 5000);
+  });
+
+  src.onerror = () => {
+    setSyncDot(false);
+    src.close(); _sseSource = null;
+    // Exponential back-off: 3s, 6s, 12s … cap at 30s
+    const delay = Math.min((_sseReconnTimer ? 6000 : 3000), 30000);
+    _sseReconnTimer = setTimeout(connectSSE, delay);
+  };
+}
+
+function _refetch(){
+  fetch(FB_URL + '.json')
+    .then(r => r.ok ? r.json() : null)
+    .then(data => { if(data) _applySSE(data); setSyncDot(true); _fbReady = true; })
+    .catch(() => setSyncDot(false));
+}
+
+connectSSE();
+
+// Re-establish SSE when app comes back to foreground — iOS can kill the
+// connection during background/lock. One refetch re-seeds state immediately,
+// then the new SSE connection takes over for ongoing updates.
 document.addEventListener('visibilitychange', () => {
-  if(!document.hidden) _pollFailures = 0;
+  if(!document.hidden){
+    if(!_sseSource || _sseSource.readyState === EventSource.CLOSED){
+      connectSSE();
+    }
+    _refetch(); // catch any changes that happened while in background
+  }
 });
+
+// ── AUTO-CLEAR AT 2AM (checked once per minute, independent of sync) ──────────
+setInterval(() => {
+  if(!_fbReady || _fbSyncing || _fbPushPending || _fbPushTimer || _localDirty) return;
+  const h     = new Date().getHours();
+  const today = new Date().toLocaleDateString('en-CA');
+  if(h >= 2 && h < 8 && st.lastAutoClearDate !== today){
+    console.log('[AutoClear] Running 2am clear');
+    executeNewDay(true);
+  }
+}, 60000);
+
 </script>
 
 <!-- STAFF GUIDE OVERLAY -->
