@@ -4039,13 +4039,10 @@ pushToFirebase = function(){
       if(r.ok){
         _localDirty = false;
         setSyncDot(true);
-        // If an SSE event arrived while this push was in flight, apply it now.
-        // This ensures we don't miss a concurrent change from another device.
-        if(_pendingSSEData){
-          const d = _pendingSSEData;
-          _pendingSSEData = null;
-          if(!_fbSyncing) dbToState(d);
-        }
+        // NOTE: _lastPollData is intentionally NOT updated here.
+        // The poll loop is the sole writer of _lastPollData, which means stale
+        // Firebase echoes after this push are naturally ignored (they match the
+        // pre-push _lastPollData and so the poll skips re-applying them).
       } else {
         setSyncDot(false);
         setTimeout(()=>{ if(_localDirty) pushToFirebase(); }, 2000);
@@ -4069,96 +4066,62 @@ function setSyncDot(ok){
   syncDot.title = ok ? 'Synced' : 'Offline';
 }
 
-// ── FIREBASE SSE LISTENER ─────────────────────────────────────────────────────
-// Replace polling with Firebase's real-time streaming endpoint. Firebase pushes
-// changes to us instantly — no polling interval, no stale-echo race condition.
+// ── FIREBASE POLL ─────────────────────────────────────────────────────────────
+// Poll every 2 seconds (10s when tab hidden).
 //
-// Flow:
-//   PUT (push)  →  Firebase accepts write  →  SSE event arrives  →  dbToState
-//
-// If an SSE event arrives while a push is in flight, we buffer it and apply it
-// once the push settles, so we never lose a concurrent change from another device.
+// Race-condition fix: do NOT set _lastPollData in the push success handler.
+// Let the poll be the only writer of _lastPollData. This means:
+//   - After we push clean_state, _lastPollData is still old_state
+//   - Stale Firebase echoes returning old_state → old_state === _lastPollData → ignored ✓
+//   - Once Firebase propagates, poll returns clean_state → clean_state !== old_state → applied ✓
+//   - Device B changes → stateB !== _lastPollData → applied immediately ✓
 
-let _sseSource      = null;
-let _pendingSSEData = null; // buffered event received while a push was in flight
-let _sseReconnTimer = null;
+let _lastPollData   = null;
+let _pollFailures   = 0;
 
-function _applySSE(data){
-  if(!data || _fbSyncing) return;
-  if(_fbPushPending || _fbPushTimer || _localDirty){
-    // Push in flight — store the latest server state and apply when push settles.
-    _pendingSSEData = data;
-    return;
-  }
-  _pendingSSEData = null;
-  dbToState(data);
-  setSyncDot(true);
-  _fbReady = true;
+function _nextPollDelay(){
+  if(document.hidden) return 10000;
+  if(_pollFailures > 0) return Math.min(2000 * (2 ** _pollFailures), 30000);
+  return 2000;
 }
 
-function connectSSE(){
-  clearTimeout(_sseReconnTimer);
-  if(_sseSource){ try{ _sseSource.close(); }catch(_){} _sseSource = null; }
-
-  // EventSource connects to Firebase SSE endpoint. No special headers needed
-  // for public-rule databases; Firebase serves full state on first connect then
-  // streams deltas (put / patch events).
-  const src = new EventSource(FB_URL + '.json');
-  _sseSource = src;
-
-  src.addEventListener('put', e => {
-    try{
-      const msg = JSON.parse(e.data);
-      // path '/' = full state replace (initial connect or full write)
-      if(msg && msg.path === '/' && msg.data) _applySSE(msg.data);
-      // sub-path puts: refetch full state rather than merging partial
-      else if(msg && msg.path !== '/') _refetch();
-    } catch(err){ console.error('[SSE] put parse error', err); }
-  });
-
-  src.addEventListener('patch', e => {
-    // Patch = partial update — easiest to refetch rather than deep-merge
-    _refetch();
-  });
-
-  src.addEventListener('cancel', () => {
-    // Auth revoked or rules changed
-    setSyncDot(false);
-    src.close(); _sseSource = null;
-    _sseReconnTimer = setTimeout(connectSSE, 5000);
-  });
-
-  src.onerror = () => {
-    setSyncDot(false);
-    src.close(); _sseSource = null;
-    // Exponential back-off: 3s, 6s, 12s … cap at 30s
-    const delay = Math.min((_sseReconnTimer ? 6000 : 3000), 30000);
-    _sseReconnTimer = setTimeout(connectSSE, delay);
-  };
-}
-
-function _refetch(){
-  fetch(FB_URL + '.json')
-    .then(r => r.ok ? r.json() : null)
-    .then(data => { if(data) _applySSE(data); setSyncDot(true); _fbReady = true; })
-    .catch(() => setSyncDot(false));
-}
-
-connectSSE();
-
-// Re-establish SSE when app comes back to foreground — iOS can kill the
-// connection during background/lock. One refetch re-seeds state immediately,
-// then the new SSE connection takes over for ongoing updates.
-document.addEventListener('visibilitychange', () => {
-  if(!document.hidden){
-    if(!_sseSource || _sseSource.readyState === EventSource.CLOSED){
-      connectSSE();
+async function poll(){
+  try{
+    const res = await fetch(FB_URL + '.json');
+    if(res.ok){
+      const data = await res.json();
+      setSyncDot(true);
+      _pollFailures = 0;
+      _fbReady = true;
+      const asStr = JSON.stringify(data);
+      if(asStr !== _lastPollData){
+        _lastPollData = asStr;
+        // Only apply if no push is in flight / queued and state is clean locally.
+        // If dirty with no push scheduled, retry the push instead.
+        if(!_fbSyncing && !_fbPushPending && !_fbPushTimer && !_localDirty){
+          dbToState(data);
+        } else if(_localDirty && !_fbPushPending && !_fbPushTimer){
+          pushToFirebase(); // retry a failed push
+        }
+      }
+    } else {
+      setSyncDot(false);
+      _pollFailures++;
     }
-    _refetch(); // catch any changes that happened while in background
+  } catch(e){
+    setSyncDot(false);
+    _pollFailures++;
   }
+  setTimeout(poll, _nextPollDelay());
+}
+poll();
+
+// Resume fast polling when app comes back to foreground
+document.addEventListener('visibilitychange', () => {
+  if(!document.hidden) _pollFailures = 0;
 });
 
-// ── AUTO-CLEAR AT 2AM (checked once per minute, independent of sync) ──────────
+// ── AUTO-CLEAR AT 2AM (checked once per minute) ───────────────────────────────
 setInterval(() => {
   if(!_fbReady || _fbSyncing || _fbPushPending || _fbPushTimer || _localDirty) return;
   const h     = new Date().getHours();
