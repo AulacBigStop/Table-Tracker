@@ -3193,6 +3193,7 @@ let _renderScheduled = false;
 let _renderPushFlag  = false;
 let _renderSaveFlag  = false;
 let _renderSnapFlag  = false;
+let _localDirty      = false; // true = local state ahead of Firebase; blocks poll from reverting
 
 function _flushRender(){
   _renderScheduled = false;
@@ -3209,7 +3210,7 @@ function scheduleRender(){
 
 function renderOnly(){ scheduleRender(); }
 function renderAll(){
-  _localDirty = true;   // block poll from reverting state before rAF fires
+  _localDirty = true;   // immediately block poll from reverting state before rAF fires
   _renderPushFlag = true;
   _renderSaveFlag = true;
   _renderSnapFlag = true;
@@ -4040,7 +4041,6 @@ function dbToState(data){
 // Uses a "max wait" pattern: rapid successive calls still push at least every
 // 1.2s so we don't starve writes during sustained fast activity.
 let _fbPushFirstCall = 0;
-let _localDirty      = false; // Set when local state changes; cleared when successfully pushed
 
 pushToFirebase = function(){
   _localDirty = true;  // mark state as having pending changes
