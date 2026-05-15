@@ -3044,10 +3044,15 @@ document.getElementById('adjust-counts-done').addEventListener('pointerup', ()=>
 
 // ── NEW DAY LOGIC (shared by manual clear and auto-clear at 2am)
 function executeNewDay(silent){
+  // Block any in-flight poll response from reverting the state reset.
+  // Without this, if a poll response arrives in the ~16ms window between
+  // the state reset and the rAF firing pushToFirebase(), dbToState() will
+  // overwrite the blank state with the old Firebase data.
+  _localDirty = true;
+
   // 1. Commit current shift into persistent history BEFORE wiping state
   pushShiftToHistory();
   pushSectionToHistory();
-  // Persist history immediately to its own localStorage key
   try{ localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(historyToObj())); } catch(e){}
 
   // 2. Reset all daily operational state. History and lastAutoClearDate survive.
@@ -3204,6 +3209,7 @@ function scheduleRender(){
 
 function renderOnly(){ scheduleRender(); }
 function renderAll(){
+  _localDirty = true;   // block poll from reverting state before rAF fires
   _renderPushFlag = true;
   _renderSaveFlag = true;
   _renderSnapFlag = true;
