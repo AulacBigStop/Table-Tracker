@@ -1852,8 +1852,7 @@ function showConfirm(msg, onYes){
   }
   function handleYes(){
     cleanup();
-    try { onYes(); }
-    catch(err) { console.error('[Confirm] Callback error:', err); }
+    onYes();
   }
   function handleNo(){
     cleanup();
@@ -3030,18 +3029,10 @@ document.getElementById('adjust-counts-done').addEventListener('pointerup', ()=>
 
 // ── NEW DAY LOGIC ─────────────────────────────────────────────────────────────
 function executeNewDay(silent){
-  // Step 1 — immediately block the poll from reverting anything.
-  // _localDirty = true means the poll guard (!_localDirty) fails, so no
-  // incoming Firebase data can overwrite state until our push lands.
+  // Block poll from reverting state during the reset
   _localDirty = true;
 
-  // Save history before wiping operational state
-  pushShiftToHistory();
-  pushSectionToHistory();
-  try{ localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(historyToObj())); } catch(e){}
-  pushHistoryToFirebase(); // one-time write per day, not part of regular sync
-
-  // Step 3 — reset all daily state
+  // Reset all daily state
   st.tables={}; st.events={}; st.movedPos={}; st.links={}; st.guestTotals={};
   st.dailyTables=0; st.dailyGuests=0; st.newServers=new Set(); st.onBreak=new Set();
   st.breakType={}; st.cutServers=new Set(); st.cutHistory=[];
@@ -3055,14 +3046,14 @@ function executeNewDay(silent){
   document.getElementById('srv-count').textContent = 2;
   localStorage.removeItem(LS_KEY);
 
-  // Step 4 — render the blank floor immediately (user sees the change now)
+  // Render the blank floor immediately
   closeModal();
-  renderOnly(); // lightweight render — no push, no snapshot yet
+  renderFloor();
+  renderStatus();
+  renderRot();
+  renderBanner();
 
-  // Step 5 — push blank state directly to Firebase, bypassing the debounce.
-  // On success: _lastPollData = what Firebase now has, so stale echoes are
-  // naturally ignored by the poll (asStr === _lastPollData → skip).
-  // On failure: _localDirty stays true; the poll retry loop picks it up.
+  // Push blank state directly to Firebase (bypasses debounce)
   const body = JSON.stringify(stateToFirebase());
   _fbPushPending = true;
   fetch(FB_URL + '.json', {
@@ -3071,14 +3062,8 @@ function executeNewDay(silent){
     body
   })
   .then(r => {
-    if(r.ok){
-      _lastPollData = body;  // poll will now see "no change" when Firebase echoes this back
-      _localDirty   = false;
-      setSyncDot(true);
-    } else {
-      setSyncDot(false);
-      // leave _localDirty = true so poll retry loop retries via pushToFirebase()
-    }
+    if(r.ok){ _lastPollData = body; _localDirty = false; setSyncDot(true); }
+    else     { setSyncDot(false); }
   })
   .catch(() => { setSyncDot(false); })
   .finally(() => { _fbPushPending = false; });
@@ -3087,7 +3072,6 @@ function executeNewDay(silent){
     setTimeout(() => pickNamesSequentially(1, 2, ()=>{ renderAll(); }), 200);
   } else {
     renderAll();
-    logActivity('AUTO', 'Auto-cleared at 2am — new day started');
   }
 }
 
