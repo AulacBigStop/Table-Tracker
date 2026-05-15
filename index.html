@@ -3044,14 +3044,13 @@ document.getElementById('adjust-counts-done').addEventListener('pointerup', ()=>
 
 // ── NEW DAY LOGIC (shared by manual clear and auto-clear at 2am)
 function executeNewDay(silent){
-  // 1. Commit current shift into persistent history (writes into st.history / st.sectionHistory)
+  // 1. Commit current shift into persistent history BEFORE wiping state
   pushShiftToHistory();
   pushSectionToHistory();
+  // Persist history immediately to its own localStorage key
+  try{ localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(historyToObj())); } catch(e){}
 
-  // 2. Reset all daily shift data.
-  //    History fields (st.history, st.sectionHistory) and lastAutoClearDate are
-  //    intentionally kept — they survive the reset and ride into Firebase with the
-  //    clean state in step 3.
+  // 2. Reset all daily operational state. History and lastAutoClearDate survive.
   st.tables={}; st.events={}; st.movedPos={}; st.links={}; st.guestTotals={};
   st.dailyTables=0; st.dailyGuests=0; st.newServers=new Set(); st.onBreak=new Set();
   st.breakType={}; st.cutServers=new Set(); st.cutHistory=[];
@@ -3061,26 +3060,23 @@ function executeNewDay(silent){
   st.servers = 2;
   st.names = {1:'Server 1',2:'Server 2',3:'Server 3',4:'Server 4',5:'Server 5',
     6:'Server 6',7:'Server 7',8:'Server 8',9:'Server 9',10:'Server 10',11:'Server 11'};
-  st.lastAutoClearDate = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+  st.lastAutoClearDate = new Date().toLocaleDateString('en-CA');
   document.getElementById('srv-count').textContent = 2;
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_HISTORY_KEY);
 
-  // 3. Push the clean reset state (with history embedded) to Firebase immediately.
+  // 3. Close any open modals and render the clean floor immediately.
   closeModal();
-  snapshotState();
-  commitImmediate();
-  // Also persist history to its own localStorage key immediately — don't wait for
-  // the debounced saveLocal, since the user could close the app right after this.
-  try{ localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(historyToObj())); } catch(e){}
+
+  // 4. Single renderAll() — this is the only push/save/snapshot trigger.
+  //    _flushRender will: render → pushToFirebase → saveLocal → snapshotState
+  //    in one clean sequence with no competing timers.
+  renderAll();
 
   if(!silent){
-    // Small delay before name picker — prevents phantom iOS touch from the "Confirm"
-    // tap bleeding into the name picker and immediately hitting Cancel.
-    setTimeout(() => pickNamesSequentially(1, 2, ()=>{ renderAll(); }), 120);
+    // Delay name picker slightly so iOS doesn't bleed the Confirm tap into it
+    setTimeout(() => pickNamesSequentially(1, 2, ()=>{ renderAll(); }), 200);
   } else {
-    // Auto-clear at 2am: render blank floor; staff enter names when they arrive
-    renderAll();
     logActivity('AUTO', 'Auto-cleared at 2am — new day started');
   }
 }
@@ -3196,9 +3192,9 @@ let _renderSnapFlag  = false;
 function _flushRender(){
   _renderScheduled = false;
   renderFloor(); renderStatus(); renderRot(); renderBanner();
-  if(_renderPushFlag){ _renderPushFlag = false; pushToFirebase(); }
+  if(_renderSnapFlag){ _renderSnapFlag = false; snapshotState();   } // snapshot first
+  if(_renderPushFlag){ _renderPushFlag = false; pushToFirebase();  } // then push (snapshotState may have already queued one; this forces it)
   if(_renderSaveFlag){ _renderSaveFlag = false; saveLocal();       }
-  if(_renderSnapFlag){ _renderSnapFlag = false; snapshotState();   }
 }
 function scheduleRender(){
   if(_renderScheduled) return;
