@@ -690,16 +690,12 @@ function historyToObj(){
   };
 }
 
-// stateToFirebase — full payload sent to Firebase. Adds undo/redo stacks so
-// other devices can restore them. The stacks are arrays of compact stateToObj
-// snapshots, so the payload stays bounded (UNDO_MAX entries × state size).
+// stateToFirebase — payload sent to Firebase on every push.
+// History is intentionally excluded — it was causing ~14MB payloads
+// downloaded on every 5-second poll, resulting in hundreds of GB/day.
+// History is managed separately via pushHistoryToFirebase / loadHistoryFromFirebase.
 function stateToFirebase(){
-  return {
-    ...stateToObj(),
-    ...historyToObj(),   // history lives alongside operational state in Firebase
-    undoStack: UNDO_STACK,
-    redoStack: REDO_STACK
-  };
+  return stateToObj();
 }
 // ── UNDO / REDO STACKS
 const UNDO_STACK = [];
@@ -776,16 +772,6 @@ function deserializeState(data, restoreStacks = true){
   st.links = {};
   for(const [k,v] of Object.entries(data.links ?? {})) st.links[+k] = new Set(v);
   const sc = document.getElementById('srv-count'); if(sc) sc.textContent = st.servers;
-
-  // Restore undo/redo stacks from remote data so all devices share history
-  if(restoreStacks && Array.isArray(data.undoStack)){
-    UNDO_STACK.length = 0;
-    data.undoStack.forEach(s => UNDO_STACK.push(s));
-  }
-  if(restoreStacks && Array.isArray(data.redoStack)){
-    REDO_STACK.length = 0;
-    data.redoStack.forEach(s => REDO_STACK.push(s));
-  }
   updateUndoBtn();
 }
 // ── LOCAL PERSISTENCE KEY
@@ -3043,21 +3029,19 @@ document.getElementById('adjust-counts-done').addEventListener('pointerup', ()=>
 
 
 // ── NEW DAY LOGIC ─────────────────────────────────────────────────────────────
-// Two-step design that avoids racing with the main state sync:
-//   1. applyLocalClear() — immediately resets state in memory and renders
-//   2. signalNewDay()    — writes a tiny date string to /clearAt in Firebase
-//      Other devices pick this up via pollClearSignal() and apply locally too.
-//
-// The main /shift sync is NOT used to trigger the clear, eliminating the race
-// between "push blank state" and "poll reverts with old Firebase data".
+function executeNewDay(silent){
+  // Step 1 — immediately block the poll from reverting anything.
+  // _localDirty = true means the poll guard (!_localDirty) fails, so no
+  // incoming Firebase data can overwrite state until our push lands.
+  _localDirty = true;
 
-function applyLocalClear(silent){
   // Save history before wiping operational state
   pushShiftToHistory();
   pushSectionToHistory();
   try{ localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(historyToObj())); } catch(e){}
+  pushHistoryToFirebase(); // one-time write per day, not part of regular sync
 
-  // Reset all daily operational state
+  // Step 3 — reset all daily state
   st.tables={}; st.events={}; st.movedPos={}; st.links={}; st.guestTotals={};
   st.dailyTables=0; st.dailyGuests=0; st.newServers=new Set(); st.onBreak=new Set();
   st.breakType={}; st.cutServers=new Set(); st.cutHistory=[];
@@ -3071,50 +3055,40 @@ function applyLocalClear(silent){
   document.getElementById('srv-count').textContent = 2;
   localStorage.removeItem(LS_KEY);
 
-  // Force the poll to treat the next Firebase response as fresh
-  // (prevents stale /shift data from being re-applied after we reset)
-  _lastPollData = null;
-  _localDirty   = true;
-
-  // Close any open modals and render the blank floor
+  // Step 4 — render the blank floor immediately (user sees the change now)
   closeModal();
-  renderAll();
+  renderOnly(); // lightweight render — no push, no snapshot yet
+
+  // Step 5 — push blank state directly to Firebase, bypassing the debounce.
+  // On success: _lastPollData = what Firebase now has, so stale echoes are
+  // naturally ignored by the poll (asStr === _lastPollData → skip).
+  // On failure: _localDirty stays true; the poll retry loop picks it up.
+  const body = JSON.stringify(stateToFirebase());
+  _fbPushPending = true;
+  fetch(FB_URL + '.json', {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body
+  })
+  .then(r => {
+    if(r.ok){
+      _lastPollData = body;  // poll will now see "no change" when Firebase echoes this back
+      _localDirty   = false;
+      setSyncDot(true);
+    } else {
+      setSyncDot(false);
+      // leave _localDirty = true so poll retry loop retries via pushToFirebase()
+    }
+  })
+  .catch(() => { setSyncDot(false); })
+  .finally(() => { _fbPushPending = false; });
 
   if(!silent){
     setTimeout(() => pickNamesSequentially(1, 2, ()=>{ renderAll(); }), 200);
   } else {
+    renderAll();
     logActivity('AUTO', 'Auto-cleared at 2am — new day started');
   }
-}
-
-function signalNewDay(){
-  const today = new Date().toLocaleDateString('en-CA');
-  fetch(CLEAR_URL + '.json', {
-    method: 'PUT',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(today)
-  }).catch(()=>{}); // fire-and-forget; other devices will catch it via pollClearSignal
-}
-
-function executeNewDay(silent){
-  applyLocalClear(silent);
-  signalNewDay();
-}
-
-// ── CLEAR SIGNAL POLL — checked alongside the main state poll ─────────────────
-// Each poll cycle fetches /clearAt. If today's date is there and we haven't
-// cleared yet, apply the clear locally. This is how other devices receive
-// the New Day action that was initiated on a different device.
-async function pollClearSignal(){
-  try{
-    const res = await fetch(CLEAR_URL + '.json');
-    if(!res.ok) return;
-    const date = await res.json(); // "YYYY-MM-DD" or null
-    const today = new Date().toLocaleDateString('en-CA');
-    if(date === today && st.lastAutoClearDate !== today){
-      applyLocalClear(true);
-    }
-  } catch(e){}
 }
 
 
@@ -3448,13 +3422,39 @@ setInterval(() => {
   } else {
     _fbPushPendingTs = 0;
   }
-}, 2000);
+}, 5000);
 let _fbSyncingTs = 0;
 let _fbPushPendingTs = 0;
 
 
 const FB_URL      = 'https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app/shift';
-const CLEAR_URL   = 'https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app/clearAt';
+const FB_HIST_URL = 'https://table-tracker-e9afa-default-rtdb.europe-west1.firebasedatabase.app/shiftHistory';
+
+// Push history to Firebase — called only from executeNewDay (once per day).
+// NOT called on regular state syncs.
+function pushHistoryToFirebase(){
+  const body = JSON.stringify(historyToObj());
+  fetch(FB_HIST_URL + '.json', {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body
+  }).catch(()=>{});
+}
+
+// Load history from Firebase — called only when reports are opened.
+// Returns a promise so openReports can await it if needed.
+function loadHistoryFromFirebase(){
+  return fetch(FB_HIST_URL + '.json')
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if(!data) return;
+      if(data.history        && Object.keys(data.history).length)        st.history        = data.history;
+      if(data.sectionHistory && Object.keys(data.sectionHistory).length) st.sectionHistory = data.sectionHistory;
+      // Persist to localStorage so it survives without network
+      try{ localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(historyToObj())); } catch(e){}
+    })
+    .catch(()=>{});
+}
 
 // ── SHIFT RECORD HELPERS (current-shift accumulation by server name)
 
@@ -3597,18 +3597,27 @@ function openReports(){
   document.querySelectorAll('.rpt-tab').forEach(t=>
     t.classList.toggle('active', t.dataset.period === _reportsPeriod));
   _syncCustomRow();
-  // Sync mode toggle visual
   document.querySelectorAll('.rpt-mode-btn').forEach(b=>{
     const active = b.dataset.mode === _historyMode;
     b.style.background = active ? 'rgba(255,200,0,.12)' : 'rgba(255,255,255,.04)';
     b.style.borderColor = active ? 'rgba(255,200,0,.35)' : 'rgba(255,255,255,.1)';
     b.style.color = active ? '#ffc800' : 'var(--dim)';
   });
-  // fetchHistory / fetchSectionHistory are now synchronous state reads
+  // Show current local history immediately, then refresh from Firebase in background.
+  // This keeps reports snappy while ensuring cross-device history is up to date.
   _historyCache        = mergeCurrentShift(fetchHistory());
   _sectionHistoryCache = mergeCurrentSection(fetchSectionHistory());
   if(_historyMode === 'section') renderSectionList();
   else renderReportsList();
+  // Background refresh from Firebase (history is no longer in the main poll payload)
+  loadHistoryFromFirebase().then(()=>{
+    if(modal.style.display === 'flex'){
+      _historyCache        = mergeCurrentShift(fetchHistory());
+      _sectionHistoryCache = mergeCurrentSection(fetchSectionHistory());
+      if(_historyMode === 'section') renderSectionList();
+      else renderReportsList();
+    }
+  });
 }
 
 // Merge st.shiftRecord (current in-progress shift) into the Firebase history
@@ -4137,9 +4146,9 @@ let _lastPollData   = null;
 let _pollFailures   = 0;
 
 function _nextPollDelay(){
-  if(document.hidden) return 10000;
-  if(_pollFailures > 0) return Math.min(2000 * (2 ** _pollFailures), 30000);
-  return 2000;
+  if(document.hidden) return 30000;
+  if(_pollFailures > 0) return Math.min(5000 * (2 ** _pollFailures), 60000);
+  return 5000;
 }
 
 async function poll(){
@@ -4167,8 +4176,6 @@ async function poll(){
     setSyncDot(false);
     _pollFailures++;
   }
-  // Check the separate clear signal alongside the main state poll
-  await pollClearSignal();
   setTimeout(poll, _nextPollDelay());
 }
 poll();
@@ -4179,7 +4186,6 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ── AUTO-CLEAR AT 2AM ─────────────────────────────────────────────────────────
-// Uses the same signalNewDay() mechanism so all devices clear together.
 setInterval(() => {
   const h     = new Date().getHours();
   const today = new Date().toLocaleDateString('en-CA');
